@@ -1,308 +1,250 @@
-// nueva-renta.js - VERSIÓN PRO (SWEETALERT2)
+// =============================================
+// nueva-renta.js — Supabase
+// =============================================
 
-// 1. URL DE TU SCRIPT
-const urlAPI = "https://script.google.com/macros/s/AKfycbygpPY8FKKFN_5OT0An4cESl_YDzPWVBYadKHbdU9jTRtL1lkRV3N-7WlCudfxqJDc_/exec"; 
+let clientesData = [];
 
-document.addEventListener("DOMContentLoaded", () => {
-    // Generar ID Renta único
-    const idRenta = Math.random().toString(16).substr(2, 8);
-    const inputIdRenta = document.getElementById('id_renta');
-    if(inputIdRenta) inputIdRenta.value = idRenta;
+document.addEventListener('DOMContentLoaded', async () => {
+    // Verificar sesión
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = 'index.html'; return; }
 
-    // Fechas iniciales
+    // Generar ID de renta
+    const idRenta = 'R-' + Date.now().toString(16).slice(-8).toUpperCase();
+    document.getElementById('id_renta').value = idRenta;
+
+    // Fecha de entrega = hoy
     const hoy = new Date().toISOString().split('T')[0];
     const inputEntrega = document.getElementById('fecha_entrega');
-    
-    if(inputEntrega) {
+    if (inputEntrega) {
         inputEntrega.value = hoy;
         inputEntrega.addEventListener('change', calcularFechaRetorno);
     }
     calcularFechaRetorno();
 
-    // Cargar Datos Iniciales
-    cargarClientes();    
-    cargarInventario();   
+    // Cargar datos
+    await cargarInventario();
+    await cargarClientes();
+
+    // Listeners de cálculo
+    ['total','descuento','abono'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', calcularSaldos);
+    });
 });
 
-// --- FUNCIÓN A: CARGAR INVENTARIO ---
+// ---- INVENTARIO ----
 async function cargarInventario() {
-    const listaContenedor = document.getElementById('lista-items');
-    if(!listaContenedor) return;
+    const lista = document.getElementById('lista-items');
+    if (!lista) return;
 
-    try {
-        const resp = await fetch(`${urlAPI}?accion=obtener_inventario`);
-        if (!resp.ok) throw new Error("Error en el servidor");
-        
-        const items = await resp.json();
-        listaContenedor.innerHTML = ""; 
-        
-        items.forEach(item => {
-            const div = document.createElement('div');
-            div.className = "flex items-center gap-4 p-3 hover:bg-[#3d3d3d] cursor-pointer border-b border-gray-700 last:border-0";
-            
-            const esUrl = item.foto && item.foto.startsWith('http');
-            const fotoUrl = esUrl ? item.foto : "https://placehold.co/50x50?text=Vestido";
+    const { data, error } = await sb
+        .from('inventario')
+        .select('*')
+        .eq('estado_actual', 'Disponible')
+        .order('nombre');
 
-            div.innerHTML = `
-                <img src="${fotoUrl}" 
-                     class="w-12 h-12 rounded-lg object-cover bg-gray-700" 
-                     onerror="this.onerror=null; this.src='https://placehold.co/50x50?text=Err';">
-                <div class="flex-1">
-                    <p class="text-sm font-bold text-white">${item.nombre || 'Sin nombre'}</p>
-                    <p class="text-[10px] text-gray-400 uppercase">Talla: <span class="text-pink-400">${item.talla || 'N/A'}</span></p>
-                </div>
-                <div class="text-right">
-                    <p class="text-xs font-bold text-green-400">$${item.precio || '0'}</p>
-                </div>
-            `;
+    if (error) { lista.innerHTML = '<p class="p-3 text-red-500 text-xs">Error cargando inventario.</p>'; return; }
 
-            div.onclick = () => seleccionarVestido(item);
-            listaContenedor.appendChild(div);
-        });
-    } catch (e) {
-        console.error("Error crítico:", e);
-        listaContenedor.innerHTML = "<p class='p-4 text-red-500 text-xs'>Error cargando inventario.</p>";
-    }
+    lista.innerHTML = '';
+    data.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'flex items-center gap-3 p-3 hover:bg-pink-50 cursor-pointer border-b border-gray-100 last:border-0 transition-colors';
+
+        const fotoUrl = item.foto && item.foto.startsWith('http')
+            ? item.foto
+            : 'https://placehold.co/50x60/f5f1eb/8a8a8e?text=Foto';
+
+        div.innerHTML = `
+            <img src="${fotoUrl}" class="w-12 h-14 rounded-xl object-cover bg-gray-100 flex-shrink-0"
+                 onerror="this.src='https://placehold.co/50x60/f5f1eb/8a8a8e?text=Foto'">
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-gray-800 truncate">${item.nombre || 'Sin nombre'}</p>
+                <p class="text-[10px] text-gray-400 uppercase mt-0.5">Talla: <span class="text-pink-500 font-bold">${item.talla || 'N/A'}</span></p>
+            </div>
+            <span class="text-sm font-black text-pink-600">$${item.precio_base || 0}</span>`;
+
+        div.onclick = () => seleccionarVestido(item);
+        lista.appendChild(div);
+    });
 }
 
-// --- FUNCIÓN B: CONTROL DEL DROPDOWN ---
 function toggleDropdown() {
-    const lista = document.getElementById('dropdown-list');
-    if(lista) lista.classList.toggle('hidden');
+    document.getElementById('dropdown-list')?.classList.toggle('hidden');
 }
 
 function seleccionarVestido(item) {
-    document.getElementById('id_articulo').value = item.id;
+    document.getElementById('id_articulo').value    = item.id_articulo;
     document.getElementById('nombre_articulo').value = item.nombre;
-    
     document.getElementById('selected-text').innerHTML = `
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 text-gray-800">
             <span class="text-pink-500 font-bold">[${item.talla}]</span> ${item.nombre}
-        </div>
-    `;
-    
+        </div>`;
     const inputTotal = document.getElementById('total');
-    if(inputTotal) inputTotal.value = item.precio;
-    
+    if (inputTotal) inputTotal.value = item.precio_base || 0;
     calcularSaldos();
     toggleDropdown();
 }
 
-window.onclick = function(event) {
-    if (!event.target.closest('#dropdown-btn')) {
-        const dd = document.getElementById('dropdown-list');
-        if(dd) dd.classList.add('hidden');
-    }
-    if (!event.target.closest('#cliente-btn')) {
-        const ddC = document.getElementById('cliente-dropdown');
-        if(ddC && event.target.id !== 'input-busqueda-cliente') ddC.classList.add('hidden');
-    }
-}
-
-// --- CÁLCULOS MATEMÁTICOS ---
+// ---- CÁLCULOS ----
 function calcularSaldos() {
-    const elTotal = document.getElementById('total');
-    const elDesc = document.getElementById('descuento');
-    const elAbono = document.getElementById('abono');
-    const elSaldo = document.getElementById('saldo');
-
-    if(elTotal && elDesc && elAbono && elSaldo) {
-        const total = parseFloat(elTotal.value) || 0;
-        const desc = parseFloat(elDesc.value) || 0;
-        const abono = parseFloat(elAbono.value) || 0;
-        elSaldo.value = total - desc - abono;
-    }
+    const total    = parseFloat(document.getElementById('total')?.value) || 0;
+    const desc     = parseFloat(document.getElementById('descuento')?.value) || 0;
+    const abono    = parseFloat(document.getElementById('abono')?.value) || 0;
+    const saldoEl  = document.getElementById('saldo');
+    if (saldoEl) saldoEl.value = (total - desc - abono).toFixed(2);
 }
-
-['total', 'descuento', 'abono'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.addEventListener('input', calcularSaldos);
-});
 
 function calcularFechaRetorno() {
-    const entregaInput = document.getElementById('fecha_entrega');
-    const retornoInput = document.getElementById('fecha_retorno');
-
-    if (entregaInput && entregaInput.value && retornoInput) {
-        const fecha = new Date(entregaInput.value);
-        fecha.setDate(fecha.getDate() + 4); 
-        retornoInput.value = fecha.toISOString().split('T')[0];
+    const entrega = document.getElementById('fecha_entrega');
+    const retorno = document.getElementById('fecha_retorno');
+    if (entrega?.value && retorno) {
+        const fecha = new Date(entrega.value);
+        fecha.setDate(fecha.getDate() + 4);
+        retorno.value = fecha.toISOString().split('T')[0];
     }
 }
 
-// --- ENVÍO DEL FORMULARIO (CON SWEETALERT2) 🚀 ---
-const formRenta = document.getElementById('form-renta');
-if(formRenta) {
-    formRenta.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // 1. VALIDACIÓN
-        const elIdCliente = document.getElementById('id_cliente');
-        const elIdArticulo = document.getElementById('id_articulo');
-        const elFechaEvento = document.getElementById('fecha_evento');
-        
-        if (!elIdCliente.value) { return Swal.fire('Falta Cliente', 'Por favor selecciona un cliente.', 'warning'); }
-        if (!elIdArticulo.value) { return Swal.fire('Falta Vestido', 'Por favor selecciona un artículo.', 'warning'); }
-        if (!elFechaEvento.value) { return Swal.fire('Falta Fecha', 'Indica la fecha del evento.', 'warning'); }
-
-        const elGarantia = document.querySelector('input[name="garantia"]:checked');
-        const elTotal = document.getElementById('total');
-        const elIdRenta = document.getElementById('id_renta');
-        const elAjustes = document.getElementById('ajustes');
-
-        // 2. LOADING STATE
-        Swal.fire({
-            title: 'Guardando Renta...',
-            html: 'Por favor espera un momento',
-            allowOutsideClick: false,
-            didOpen: () => { Swal.showLoading() }
-        });
-
-        // 3. EMPAQUETADO
-        const datos = {
-            accion: "crear_renta",
-            id_renta: elIdRenta.value,
-            id_cliente: elIdCliente.value,
-            id_articulo: elIdArticulo.value,
-            fecha_evento: elFechaEvento.value,
-            ajustes: elAjustes.value,
-            fecha_entrega: document.getElementById('fecha_entrega').value,
-            fecha_retorno: document.getElementById('fecha_retorno').value,
-            precio_total: elTotal.value,
-            abono: document.getElementById('abono').value,
-            descuento: document.getElementById('descuento').value,
-            garantia: elGarantia ? elGarantia.value : ""
-        };
-
-        // 4. ENVÍO
-        fetch(urlAPI, {
-            method: "POST",
-            body: new URLSearchParams(datos)
-        })
-        .then(res => {
-            // ÉXITO
-            Swal.fire({
-                icon: 'success',
-                title: '¡Renta Guardada!',
-                text: 'El inventario ha sido actualizado.',
-                confirmButtonText: 'Volver al Admin',
-                confirmButtonColor: '#3085d6'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = "admin.html";
-                }
-            });
-        })
-        .catch(err => {
-            Swal.fire('Error', 'No se pudo conectar con el servidor: ' + err, 'error');
-        });
-    });
+// ---- CLIENTES ----
+async function cargarClientes() {
+    const { data, error } = await sb.from('clientes').select('*').order('nombre_completo');
+    if (!error) clientesData = data || [];
 }
 
-// --- GESTIÓN DE CLIENTES ---
-let clientesData = []; 
-
-async function cargarClientes() {
-    try {
-        const resp = await fetch(`${urlAPI}?accion=obtener_clientes`);
-        clientesData = await resp.json();
-        renderizarListaClientes([]); 
-    } catch (e) { console.error("Error al cargar clientes:", e); }
+function toggleClienteDropdown() {
+    const dd = document.getElementById('cliente-dropdown');
+    if (!dd) return;
+    dd.classList.toggle('hidden');
+    if (!dd.classList.contains('hidden')) {
+        document.getElementById('input-busqueda-cliente')?.focus();
+        renderizarListaClientes(clientesData);
+    }
 }
 
 function filtrarClientes() {
-    const input = document.getElementById('input-busqueda-cliente');
-    if(!input) return;
-    const busqueda = input.value.toLowerCase();
-    
-    if(busqueda.length > 0) {
-        const filtrados = clientesData.filter(c => c.nombre.toLowerCase().includes(busqueda));
-        renderizarListaClientes(filtrados);
-    } else {
-        renderizarListaClientes([]); 
-    }
+    const busqueda = document.getElementById('input-busqueda-cliente')?.value.toLowerCase() || '';
+    const filtrados = busqueda
+        ? clientesData.filter(c => c.nombre_completo.toLowerCase().includes(busqueda))
+        : clientesData;
+    renderizarListaClientes(filtrados);
 }
 
 function renderizarListaClientes(lista) {
     const contenedor = document.getElementById('lista-clientes-sugerencias');
-    if(!contenedor) return;
-    contenedor.innerHTML = "";
-    
+    if (!contenedor) return;
+    contenedor.innerHTML = '';
+
+    if (lista.length === 0) {
+        contenedor.innerHTML = '<p class="p-3 text-gray-400 text-xs text-center">No se encontraron clientes</p>';
+        return;
+    }
+
     lista.forEach(c => {
         const div = document.createElement('div');
-        div.className = "p-3 hover:bg-[#3d3d3d] cursor-pointer text-sm border-b border-gray-700 text-white flex justify-between";
-        div.innerHTML = `<span>${c.nombre}</span> <span class="text-gray-500 text-[10px]">${c.id}</span>`;
-        
+        div.className = 'p-3 hover:bg-pink-50 cursor-pointer text-sm border-b border-gray-100 last:border-0 flex justify-between items-center transition-colors';
+        div.innerHTML = `<span class="font-medium text-gray-800">${c.nombre_completo}</span>
+                         <span class="text-[10px] text-gray-400 font-mono">${c.id_cliente}</span>`;
         div.onclick = () => {
-            document.getElementById('id_cliente').value = c.id;
-            document.getElementById('nombre_cliente').value = c.nombre;
-            document.getElementById('cliente-seleccionado').innerText = c.nombre;
-            const dd = document.getElementById('cliente-dropdown');
-            if(dd) dd.classList.add('hidden');
+            document.getElementById('id_cliente').value      = c.id_cliente;
+            document.getElementById('nombre_cliente').value  = c.nombre_completo;
+            document.getElementById('cliente-seleccionado').textContent = c.nombre_completo;
+            document.getElementById('cliente-dropdown')?.classList.add('hidden');
         };
         contenedor.appendChild(div);
     });
 }
 
-function toggleClienteDropdown() {
-    const dd = document.getElementById('cliente-dropdown');
-    if(dd) {
-        dd.classList.toggle('hidden');
-        if(!dd.classList.contains('hidden')) {
-            const input = document.getElementById('input-busqueda-cliente');
-            if(input) input.focus();
-            renderizarListaClientes(clientesData);
-        }
-    }
-}
-
-// --- MODAL NUEVO CLIENTE (SWEETALERT) ---
-function abrirModalCliente() { 
-    const modal = document.getElementById('modal-nuevo-cliente');
-    if(modal) modal.classList.remove('hidden'); 
-}
-function cerrarModalCliente() { 
-    const modal = document.getElementById('modal-nuevo-cliente');
-    if(modal) modal.classList.add('hidden'); 
-}
+// ---- MODAL NUEVO CLIENTE ----
+function abrirModalCliente()  { document.getElementById('modal-nuevo-cliente')?.classList.remove('hidden'); }
+function cerrarModalCliente() { document.getElementById('modal-nuevo-cliente')?.classList.add('hidden'); }
 
 async function guardarNuevoCliente() {
-    const nombre = document.getElementById('nuevo-cliente-nombre').value;
-    const tel = document.getElementById('nuevo-cliente-tel').value;
+    const nombre = document.getElementById('nuevo-cliente-nombre').value.trim();
+    const tel    = document.getElementById('nuevo-cliente-tel').value.trim();
+    if (!nombre || !tel) return Swal.fire('Faltan datos', 'Nombre y teléfono son obligatorios.', 'warning');
 
-    if(!nombre || !tel) return Swal.fire('Ups', 'Falta nombre o teléfono', 'warning');
+    Swal.fire({ title: 'Registrando...', didOpen: () => Swal.showLoading() });
 
-    Swal.fire({
-        title: 'Registrando...',
-        didOpen: () => { Swal.showLoading() }
-    });
+    const idCliente = 'C-' + Math.random().toString(36).substr(2, 4).toUpperCase();
+    const { data, error } = await sb.from('clientes').insert({
+        id_cliente:      idCliente,
+        nombre_completo: nombre,
+        telefono:        tel
+    }).select().single();
+
+    if (error) return Swal.fire('Error', 'No se pudo guardar el cliente.', 'error');
+
+    clientesData.push(data);
+    document.getElementById('id_cliente').value      = data.id_cliente;
+    document.getElementById('nombre_cliente').value  = data.nombre_completo;
+    document.getElementById('cliente-seleccionado').textContent = data.nombre_completo;
+
+    cerrarModalCliente();
+    document.getElementById('nuevo-cliente-nombre').value = '';
+    document.getElementById('nuevo-cliente-tel').value    = '';
+
+    Swal.fire({ icon: 'success', title: 'Cliente registrado', timer: 1200, showConfirmButton: false });
+}
+
+// ---- CERRAR DROPDOWNS AL CLICK FUERA ----
+window.addEventListener('click', (e) => {
+    if (!e.target.closest('#dropdown-btn'))
+        document.getElementById('dropdown-list')?.classList.add('hidden');
+    if (!e.target.closest('#cliente-btn') && e.target.id !== 'input-busqueda-cliente')
+        document.getElementById('cliente-dropdown')?.classList.add('hidden');
+});
+
+// ---- ENVIAR FORMULARIO ----
+document.getElementById('form-renta')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const idCliente  = document.getElementById('id_cliente').value;
+    const idArticulo = document.getElementById('id_articulo').value;
+    const fechaEvento = document.getElementById('fecha_evento').value;
+
+    if (!idCliente)   return Swal.fire('Falta Cliente',  'Por favor selecciona un cliente.', 'warning');
+    if (!idArticulo)  return Swal.fire('Falta Vestido',  'Por favor selecciona un artículo.', 'warning');
+    if (!fechaEvento) return Swal.fire('Falta Fecha',    'Indica la fecha del evento.', 'warning');
+
+    Swal.fire({ title: 'Guardando Renta...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    const garantia = document.querySelector('input[name="garantia"]:checked')?.value || '';
 
     try {
-        const resp = await fetch(`${urlAPI}?accion=crear_cliente&nombre=${encodeURIComponent(nombre)}&telefono=${encodeURIComponent(tel)}`, {
-            method: "POST"
+        // 1. Guardar renta
+        const { error: rentaError } = await sb.from('rentas').insert({
+            id_renta:           document.getElementById('id_renta').value,
+            id_cliente:         idCliente,
+            id_articulo:        idArticulo,
+            fecha_evento:       fechaEvento,
+            fecha_entrega:      document.getElementById('fecha_entrega').value,
+            fecha_retorno:      document.getElementById('fecha_retorno').value,
+            total_renta:        parseFloat(document.getElementById('total').value) || 0,
+            descuento:          parseFloat(document.getElementById('descuento').value) || 0,
+            abono:              parseFloat(document.getElementById('abono').value) || 0,
+            saldo_pendiente:    parseFloat(document.getElementById('saldo').value) || 0,
+            estatus_renta:      'Activa',
+            documento_garantia: garantia,
+            ajustes:            document.getElementById('ajustes').value
         });
-        const nuevoCliente = await resp.json();
-        
-        clientesData.push(nuevoCliente);
-        
-        document.getElementById('id_cliente').value = nuevoCliente.id;
-        document.getElementById('nombre_cliente').value = nuevoCliente.nombre;
-        document.getElementById('cliente-seleccionado').innerText = nuevoCliente.nombre;
-        
-        cerrarModalCliente();
-        
+        if (rentaError) throw rentaError;
+
+        // 2. Marcar vestido como Rentado
+        const { error: invError } = await sb.from('inventario')
+            .update({ estado_actual: 'Rentado' })
+            .eq('id_articulo', idArticulo);
+        if (invError) throw invError;
+
         Swal.fire({
             icon: 'success',
-            title: 'Cliente Registrado',
-            text: 'Se ha seleccionado automáticamente',
-            timer: 1500,
-            showConfirmButton: false
-        });
-        
-        document.getElementById('nuevo-cliente-nombre').value = "";
-        document.getElementById('nuevo-cliente-tel').value = "";
+            title: '¡Renta Guardada!',
+            text: 'El inventario ha sido actualizado.',
+            confirmButtonText: 'Volver al Admin',
+            confirmButtonColor: '#d63384'
+        }).then(() => { window.location.href = 'admin.html'; });
 
-    } catch (e) {
-        Swal.fire('Error', 'No se pudo guardar el cliente', 'error');
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Error', 'No se pudo guardar: ' + (err.message || err), 'error');
     }
-}
+});
