@@ -7,6 +7,16 @@ let itemEditing  = null;
 let rentaEditing = null;
 let calendarInst = null;
 
+// ---- HELPER: URL de foto (AppSheet + Supabase + HTTP) ----
+function obtenerUrlFoto(foto, size) {
+    const placeholder = size === 'sm'
+        ? 'https://placehold.co/60x72/f5f1eb/8a8a8e?text=Foto'
+        : 'https://placehold.co/100x120/f5f1eb/8a8a8e?text=Foto';
+    if (!foto) return placeholder;
+    if (foto.startsWith('http')) return foto;
+    return `https://www.appsheet.com/template/gettablefileurl?appName=RentaVestidosAPP-250346467&tableName=Inventario&fileName=${encodeURIComponent(foto)}`;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await sb.auth.getSession();
     if (!session) { window.location.href = 'index.html'; return; }
@@ -25,7 +35,6 @@ async function cargarTodo() {
     datosGlobales.clientes   = clientes.data || [];
 }
 
-// ---- TABS ----
 function cambiarTab(tab) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('nav button').forEach(el => {
@@ -45,7 +54,6 @@ function cambiarTab(tab) {
     }
 }
 
-// ---- INVENTARIO ----
 let filtroActual = '';
 
 function renderizarInventario(lista) {
@@ -53,8 +61,8 @@ function renderizarInventario(lista) {
     if (!contenedor) return;
     const busqueda = (document.getElementById('buscador')?.value || '').toLowerCase();
     const filtrada = lista.filter(i => {
-        const txt   = !busqueda || (i.nombre||'').toLowerCase().includes(busqueda) || (i.id_articulo||'').toLowerCase().includes(busqueda);
-        const est   = !filtroActual || i.estado_actual === filtroActual;
+        const txt = !busqueda || (i.nombre||'').toLowerCase().includes(busqueda) || (i.id_articulo||'').toLowerCase().includes(busqueda);
+        const est = !filtroActual || i.estado_actual === filtroActual;
         return txt && est;
     });
     if (!filtrada.length) {
@@ -64,7 +72,7 @@ function renderizarInventario(lista) {
     contenedor.innerHTML = '';
     filtrada.forEach(item => {
         const cfg = { Disponible:{color:'bg-green-100 text-green-700'}, Rentado:{color:'bg-blue-100 text-blue-700'}, Limpieza:{color:'bg-yellow-100 text-yellow-700'} }[item.estado_actual] || {color:'bg-gray-100 text-gray-500'};
-        const fotoUrl = item.foto && item.foto.startsWith('http') ? item.foto : 'https://placehold.co/60x72/f5f1eb/8a8a8e?text=Foto';
+        const fotoUrl = obtenerUrlFoto(item.foto, 'sm');
         const card = document.createElement('div');
         card.className = 'item-card bg-white rounded-2xl border border-gray-100 p-3 flex items-center gap-3 cursor-pointer active:scale-95 transition-all';
         card.innerHTML = `<img src="${fotoUrl}" class="w-14 h-16 rounded-xl object-cover bg-gray-100 flex-shrink-0" onerror="this.src='https://placehold.co/60x72/f5f1eb/8a8a8e?text=Foto'">
@@ -89,7 +97,6 @@ function renderizarInventario(lista) {
 document.getElementById('buscador')?.addEventListener('input', () => renderizarInventario(datosGlobales.inventario));
 function filtrarInventario(estado) { filtroActual = estado; renderizarInventario(datosGlobales.inventario); }
 
-// ---- MODAL VESTIDO ----
 function abrirModal(item) {
     itemEditing = item;
     document.getElementById('modal-titulo').textContent    = item.nombre || '—';
@@ -121,7 +128,6 @@ async function cambiarVisibilidadWeb(publicado) {
     if (idx !== -1) datosGlobales.inventario[idx].publicado = publicado;
 }
 
-// ---- RENTAS ----
 function renderizarRentas(lista) {
     const contenedor = document.getElementById('lista-rentas');
     if (!contenedor) return;
@@ -135,7 +141,7 @@ function renderizarRentas(lista) {
         const cliente = datosGlobales.clientes.find(c => c.id_cliente === r.id_cliente);
         const vestido = datosGlobales.inventario.find(i => i.id_articulo === r.id_articulo);
         const saldo   = parseFloat(r.saldo_pendiente) || 0;
-        const fotoUrl = vestido?.foto && vestido.foto.startsWith('http') ? vestido.foto : 'https://placehold.co/60x72/f5f1eb/8a8a8e?text=Foto';
+        const fotoUrl = obtenerUrlFoto(vestido?.foto, 'sm');
         const card = document.createElement('div');
         card.className = 'item-card bg-white rounded-2xl border border-gray-100 p-3 flex items-center gap-3 cursor-pointer active:scale-95 transition-all';
         card.innerHTML = `<img src="${fotoUrl}" class="w-14 h-16 rounded-xl object-cover bg-gray-100 flex-shrink-0" onerror="this.src='https://placehold.co/60x72/f5f1eb/8a8a8e?text=Foto'">
@@ -156,12 +162,11 @@ function renderizarRentas(lista) {
     });
 }
 
-// ---- MODAL RENTA ----
 function abrirModalRenta(r) {
     rentaEditing = r;
     const cliente = datosGlobales.clientes.find(c => c.id_cliente === r.id_cliente);
     const vestido = datosGlobales.inventario.find(i => i.id_articulo === r.id_articulo);
-    const fotoUrl = vestido?.foto && vestido.foto.startsWith('http') ? vestido.foto : 'https://placehold.co/100x120?text=Foto';
+    const fotoUrl = obtenerUrlFoto(vestido?.foto, 'lg');
     document.getElementById('renta-modal-foto').src           = fotoUrl;
     document.getElementById('renta-modal-cliente').textContent = cliente?.nombre_completo || r.id_cliente;
     document.getElementById('renta-modal-vestido').textContent = vestido?.nombre || r.id_articulo;
@@ -173,7 +178,7 @@ function abrirModalRenta(r) {
     const tel = cliente?.telefono;
     const btnWA = document.getElementById('btn-whatsapp-renta');
     if (tel) { btnWA.onclick = () => enviarRecordatorioWhatsApp(cliente, r, vestido); btnWA.classList.remove('hidden'); }
-    else      { btnWA.classList.add('hidden'); }
+    else { btnWA.classList.add('hidden'); }
     const saldo = parseFloat(r.saldo_pendiente) || 0;
     document.getElementById('renta-badge-status').classList.toggle('hidden', r.estatus_renta !== 'Finalizada');
     document.getElementById('btn-cobrar').classList.toggle('hidden', saldo <= 0 || r.estatus_renta === 'Finalizada');
@@ -227,7 +232,6 @@ function enviarRecordatorioWhatsApp(cliente, renta, vestido) {
     window.open('https://wa.me/'+num+'?text='+encodeURIComponent(msg),'_blank');
 }
 
-// ---- CLIENTES ----
 function renderizarClientes() {
     const contenedor = document.getElementById('lista-clientes');
     if (!contenedor) return;
@@ -285,7 +289,6 @@ function abrirHistorialCliente(cliente) {
     document.body.style.overflow = 'hidden';
 }
 
-// ---- CALENDARIO ----
 function renderizarCalendario() {
     const el = document.getElementById('calendar');
     if (!el) return;
@@ -306,7 +309,6 @@ function renderizarCalendario() {
     calendarInst.render();
 }
 
-// ---- FINANZAS ----
 function renderizarDashboard() {
     const rentas = datosGlobales.rentas;
     const totalIngresos = rentas.reduce((s,r) => s+(parseFloat(r.abono)||0),0);
@@ -325,7 +327,6 @@ function renderizarDashboard() {
     if (ctxE) { if (ctxE._ci) ctxE._ci.destroy(); ctxE._ci = new Chart(ctxE,{ type:'doughnut', data:{ labels:['Disponible','Rentado','Limpieza'], datasets:[{ data:[estados.Disponible,estados.Rentado,estados.Limpieza], backgroundColor:['#22c55e','#3b82f6','#eab308'], borderWidth:0 }] }, options:{ plugins:{legend:{position:'bottom'}}, cutout:'65%' } }); }
 }
 
-// ---- CERRAR SESIÓN ----
 async function cerrarSesion() {
     await sb.auth.signOut();
     window.location.href = 'index.html';

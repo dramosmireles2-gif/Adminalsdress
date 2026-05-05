@@ -1,5 +1,18 @@
 // =============================================
 // nueva-renta.js — Supabase
+
+function obtenerUrlFoto(foto) {
+    if (!foto) return 'https://placehold.co/50x60/f5f1eb/8a8a8e?text=Foto';
+    if (foto.startsWith('http')) return foto;
+    return `https://www.appsheet.com/template/gettablefileurl?appName=RentaVestidosAPP-250346467&tableName=Inventario&fileName=${encodeURIComponent(foto)}`;
+}
+
+
+function obtenerUrlFoto(foto) {
+    if (!foto) return 'https://placehold.co/50x60/f5f1eb/8a8a8e?text=Foto';
+    if (foto.startsWith('http')) return foto;
+    return `https://www.appsheet.com/template/gettablefileurl?appName=RentaVestidosAPP-250346467&tableName=Inventario&fileName=${encodeURIComponent(foto)}`;
+}
 // =============================================
 
 let clientesData = [];
@@ -51,9 +64,7 @@ async function cargarInventario() {
         const div = document.createElement('div');
         div.className = 'flex items-center gap-3 p-3 hover:bg-pink-50 cursor-pointer border-b border-gray-100 last:border-0 transition-colors';
 
-        const fotoUrl = item.foto && item.foto.startsWith('http')
-            ? item.foto
-            : 'https://placehold.co/50x60/f5f1eb/8a8a8e?text=Foto';
+        const fotoUrl = obtenerUrlFoto(item.foto);
 
         div.innerHTML = `
             <img src="${fotoUrl}" class="w-12 h-14 rounded-xl object-cover bg-gray-100 flex-shrink-0"
