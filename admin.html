@@ -113,6 +113,25 @@
 
         <!-- VESTIDOS -->
         <section id="sec-inv" class="tab-content space-y-4">
+            <!-- Categorías -->
+            <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-3">
+                <button onclick="filtrarTipo('')"
+                    class="whitespace-nowrap px-4 py-1.5 rounded-full bg-gray-800 text-white text-[10px] font-bold">
+                    Todo
+                </button>
+                <button onclick="filtrarTipo('Vestido')"
+                    class="whitespace-nowrap px-4 py-1.5 rounded-full bg-pink-50 text-pink-700 border border-pink-200 text-[10px] font-bold">
+                    👗 Vestidos
+                </button>
+                <button onclick="filtrarTipo('Zapato')"
+                    class="whitespace-nowrap px-4 py-1.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold">
+                    👠 Zapatos
+                </button>
+                <button onclick="filtrarTipo('Bolsa')"
+                    class="whitespace-nowrap px-4 py-1.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200 text-[10px] font-bold">
+                    👜 Bolsas
+                </button>
+            </div>
             <!-- Buscador -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-3">
                 <div class="relative">
