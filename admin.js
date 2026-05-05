@@ -117,10 +117,16 @@ function cerrarModal() {
 }
 async function guardarEstado(nuevoEstado) {
     if (!itemEditing) return;
+    const item = { ...itemEditing };
     cerrarModal();
-    const { error } = await sb.from('inventario').update({ estado_actual: nuevoEstado }).eq('id_articulo', itemEditing.id_articulo);
+
+    const { error } = await sb.from('inventario')
+        .update({ estado_actual: nuevoEstado })
+        .eq('id_articulo', item.id_articulo);
+
     if (error) { Swal.fire('Error','No se pudo actualizar.','error'); return; }
-    const idx = datosGlobales.inventario.findIndex(i => i.id_articulo === itemEditing.id_articulo);
+
+    const idx = datosGlobales.inventario.findIndex(i => i.id_articulo === item.id_articulo);
     if (idx !== -1) datosGlobales.inventario[idx].estado_actual = nuevoEstado;
     renderizarInventario(datosGlobales.inventario);
     Swal.fire({ icon:'success', title:'Marcado como ' + nuevoEstado, timer:1000, showConfirmButton:false });
@@ -197,18 +203,20 @@ function cerrarModalRenta() {
 }
 async function guardarEstadoRenta(nuevoEstado) {
     if (!rentaEditing) return;
+    const renta = { ...rentaEditing };
     cerrarModalRenta();
-    await sb.from('inventario').update({ estado_actual: nuevoEstado }).eq('id_articulo', rentaEditing.id_articulo);
-    const idx = datosGlobales.inventario.findIndex(i => i.id_articulo === rentaEditing.id_articulo);
+    await sb.from('inventario').update({ estado_actual: nuevoEstado }).eq('id_articulo', renta.id_articulo);
+    const idx = datosGlobales.inventario.findIndex(i => i.id_articulo === renta.id_articulo);
     if (idx !== -1) datosGlobales.inventario[idx].estado_actual = nuevoEstado;
     Swal.fire({ icon:'success', title:'Vestido → ' + nuevoEstado, timer:1000, showConfirmButton:false });
 }
 async function cobrarDeudaJS() {
     if (!rentaEditing) return;
+    const renta = { ...rentaEditing };
     Swal.fire({ title:'Registrando pago...', didOpen:()=>Swal.showLoading() });
-    const { error } = await sb.from('rentas').update({ saldo_pendiente:0, abono: rentaEditing.total_renta }).eq('id_renta', rentaEditing.id_renta);
+    const { error } = await sb.from('rentas').update({ saldo_pendiente:0, abono: renta.total_renta }).eq('id_renta', renta.id_renta);
     if (error) { Swal.fire('Error','No se pudo registrar.','error'); return; }
-    const idx = datosGlobales.rentas.findIndex(r => r.id_renta === rentaEditing.id_renta);
+    const idx = datosGlobales.rentas.findIndex(r => r.id_renta === renta.id_renta);
     if (idx !== -1) datosGlobales.rentas[idx].saldo_pendiente = 0;
     cerrarModalRenta();
     renderizarRentas(datosGlobales.rentas);
