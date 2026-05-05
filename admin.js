@@ -199,14 +199,16 @@ function cerrarModalRenta() {
 }
 async function guardarEstadoRenta(nuevoEstado) {
     if (!rentaEditing) return;
+    const renta = { ...rentaEditing };
     cerrarModalRenta();
-    await sb.from('inventario').update({ estado_actual: nuevoEstado }).eq('id_articulo', rentaEditing.id_articulo);
-    const idx = datosGlobales.inventario.findIndex(i => i.id_articulo === rentaEditing.id_articulo);
+    await sb.from('inventario').update({ estado_actual: nuevoEstado }).eq('id_articulo', renta.id_articulo);
+    const idx = datosGlobales.inventario.findIndex(i => i.id_articulo === renta.id_articulo);
     if (idx !== -1) datosGlobales.inventario[idx].estado_actual = nuevoEstado;
     Swal.fire({ icon:'success', title:'Vestido → ' + nuevoEstado, timer:1000, showConfirmButton:false });
 }
 async function cobrarDeudaJS() {
     if (!rentaEditing) return;
+    const renta = { ...rentaEditing };
     Swal.fire({ title:'Registrando pago...', didOpen:()=>Swal.showLoading() });
     const { error } = await sb.from('rentas').update({ saldo_pendiente:0, abono: rentaEditing.total_renta }).eq('id_renta', rentaEditing.id_renta);
     if (error) { Swal.fire('Error','No se pudo registrar.','error'); return; }
@@ -218,6 +220,7 @@ async function cobrarDeudaJS() {
 }
 async function finalizarRentaJS() {
     if (!rentaEditing) return;
+    const renta = { ...rentaEditing };
     Swal.fire({ title:'Finalizando renta...', didOpen:()=>Swal.showLoading() });
     await Promise.all([
         sb.from('rentas').update({ estatus_renta:'Finalizada' }).eq('id_renta', rentaEditing.id_renta),
