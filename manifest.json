@@ -1,0 +1,22 @@
+{
+  "name": "Als Dress Admin",
+  "short_name": "ALS Admin",
+  "description": "Panel administrativo de Als Dress",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f5f4f2",
+  "theme_color": "#d63384",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "Icono.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "Icono.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
