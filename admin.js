@@ -40,25 +40,23 @@ document.addEventListener('DOMContentLoaded', () => {
 function cambiarTab(tab) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('nav button').forEach(el => {
-        el.classList.remove('border-pink-600', 'text-pink-600');
-        el.classList.add('text-gray-400');
+        el.classList.remove('active', 'border-pink-600', 'text-pink-600');
+        el.classList.add('text-gray-400', 'border-transparent');
     });
 
     const seccion = document.getElementById(`sec-${tab}`);
-    const boton = document.getElementById(`btn-tab-${tab}`);
-    
-    if(seccion && boton) {
+    const boton   = document.getElementById(`btn-tab-${tab}`);
+
+    if (seccion && boton) {
         seccion.classList.remove('hidden');
-        boton.classList.add('border-pink-600', 'text-pink-600');
-        boton.classList.remove('text-gray-400');
-        
-        if(tab === 'clientes') renderizarClientes(); 
-        if(tab === 'rentas') renderizarRentas(datosGlobales.rentas);
-        if(tab === 'historial') renderizarHistorial(datosGlobales.rentas);
-        if(tab === 'finanzas') renderizarDashboard();
-        if(tab === 'calendario') {
-            setTimeout(() =>{ renderizarCalendario();},150);
-        }
+        boton.classList.add('active', 'border-pink-600', 'text-pink-600');
+        boton.classList.remove('text-gray-400', 'border-transparent');
+
+        if (tab === 'clientes')   renderizarClientes();
+        if (tab === 'rentas')     renderizarRentas(datosGlobales.rentas);
+        if (tab === 'historial')  renderizarHistorial(datosGlobales.rentas);
+        if (tab === 'finanzas')   renderizarDashboard();
+        if (tab === 'calendario') setTimeout(() => renderizarCalendario(), 150);
     }
 }
 
@@ -181,7 +179,8 @@ function renderizarRentas(lista) {
     activas.forEach(r => {
         const cliente = datosGlobales.clientes.find(c => c['ID_Cliente'] === r['ID_Cliente']);
         const nombreCliente = cliente ? (cliente['Nombre'] || cliente['Nombre_Completo']) : r['ID_Cliente'];
-        const nombreVestido = r['Fecha_Evento'] || "Vestido"; 
+        const vestidoRenta = datosGlobales.inventario.find(i => i['ID_Articulo'] === r['ID_Articulo']);
+        const nombreVestido = vestidoRenta ? vestidoRenta['Nombre'] : (r['ID_Articulo'] || "Vestido");
         const saldo = limpiarDinero(r['Saldo_Pendiente']);
         const colorSaldo = saldo > 0 ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700';
         contenedor.innerHTML += `
@@ -405,7 +404,7 @@ function abrirModalRenta(idRenta) {
     document.getElementById('renta-modal-cliente').innerText = cliente ? (cliente['Nombre'] || cliente['Nombre_Completo']) : "Cliente";
     
     let idArticulo = renta['ID_Articulo'] || Object.values(renta)[12];
-    let nombreVestido = renta['Fecha_Evento'] || "Vestido"; 
+    let nombreVestido = r['ID_Articulo'] || "Vestido";
     let urlFoto = "";
     if (idArticulo) {
         const vestido = datosGlobales.inventario.find(i => i['ID_Articulo'] === idArticulo);
@@ -661,9 +660,4 @@ function enviarTicketWhatsApp() {
     const mensaje = `👋 Hola ${cliente['Nombre']}, recordatorio de tu renta en *ALS Rent*:\n👗 *Vestido:* ${vestido}\n📅 *Devolución:* ${retorno}\n💰 *Saldo:* ${saldo}\n\n¡Te esperamos! ✨`;
     
     window.open(`https://wa.me/${tel}?text=${encodeURIComponent(mensaje)}`, '_blank');
-}
-// admin.js
-function cerrarSesion() {
-    localStorage.removeItem('als_sesion');
-    window.location.href = 'index.html'; // <--- AQUÍ ESTÁ EL CAMBIO
 }
