@@ -234,6 +234,7 @@
 
     <!-- ===== MODAL EDITAR VESTIDO ===== -->
     <div id="modal-editar" class="hidden fixed inset-0 bg-black/60 z-[60] flex items-end sm:items-center justify-center backdrop-blur-sm">
+<<<<<<< HEAD
         <div class="bg-white w-full sm:w-[440px] rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
 
             <div class="flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0">
@@ -291,7 +292,182 @@
                         <button onclick="venderVestido()" class="p-3.5 rounded-2xl border border-purple-100 bg-purple-50 text-purple-700 font-bold flex items-center gap-3 active:scale-95 transition-transform text-sm">
                             <span class="material-icons-round text-purple-500">sell</span>Marcar como Vendido
                         </button>
+=======
+        <div class="bg-white w-full sm:w-96 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden">
+
+            <!-- Handle bar (móvil) -->
+            <div class="flex justify-center pt-3 pb-1 sm:hidden">
+                <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
+            </div>
+
+            <div class="p-6">
+                <h2 class="font-display text-xl font-bold text-gray-900 leading-tight" id="modal-titulo">Nombre del Vestido</h2>
+                <p class="text-xs text-gray-400 font-mono mt-1 mb-5" id="modal-subtitulo">ID...</p>
+
+                <!-- Toggle Publicado -->
+                <div class="flex items-center justify-between p-3.5 bg-gray-50 rounded-2xl mb-5 border border-gray-100">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center">
+                            <span class="material-icons-round text-pink-500 text-lg">language</span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-700">Visible en catálogo web</p>
+                            <p class="text-[10px] text-gray-400">Mostrar en la página pública</p>
+                        </div>
                     </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="toggle-publicado" class="sr-only peer" onchange="cambiarVisibilidadWeb(this.checked)">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500"></div>
+                    </label>
+                </div>
+
+                <!-- Botones de estado -->
+                <div class="grid grid-cols-1 gap-2.5">
+                    <button onclick="guardarEstado('Disponible')"
+                        class="p-4 rounded-2xl border border-green-100 bg-green-50 text-green-700 font-bold flex items-center gap-3 active:scale-95 transition-transform text-sm">
+                        <span class="material-icons-round text-green-500">check_circle</span>
+                        Marcar como Disponible
+                    </button>
+                    <button onclick="guardarEstado('Rentado')"
+                        class="p-4 rounded-2xl border border-blue-100 bg-blue-50 text-blue-700 font-bold flex items-center gap-3 active:scale-95 transition-transform text-sm">
+                        <span class="material-icons-round text-blue-500">shopping_bag</span>
+                        Marcar como Rentado
+                    </button>
+                    <button onclick="guardarEstado('Limpieza')"
+                        class="p-4 rounded-2xl border border-yellow-100 bg-yellow-50 text-yellow-700 font-bold flex items-center gap-3 active:scale-95 transition-transform text-sm">
+                        <span class="material-icons-round text-yellow-500">local_laundry_service</span>
+                        Enviar a Limpieza
+                    </button>
+                    <button onclick="cerrarModal()"
+                        class="mt-1 py-3 text-gray-400 text-sm font-medium hover:text-gray-600 transition-colors text-center">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL DETALLE RENTA ===== -->
+    <div id="modal-renta-detalle" class="hidden fixed inset-0 bg-black/70 z-[60] flex items-end sm:items-center justify-center backdrop-blur-sm">
+        <div class="bg-white w-full sm:w-[420px] rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] overflow-y-auto">
+
+            <div class="flex justify-center pt-3 pb-1 sm:hidden">
+                <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
+            </div>
+
+            <div class="p-6">
+                <!-- Cabecera -->
+                <div class="flex gap-4 mb-5">
+                    <img id="renta-modal-foto" src="" alt="Vestido"
+                        class="w-20 h-24 object-cover rounded-2xl bg-gray-100 shadow-sm border border-gray-100 flex-shrink-0"
+                        onerror="this.src='https://placehold.co/100x120?text=Sin+Foto'">
+                    <div class="flex-1">
+                        <h2 class="font-display text-lg font-bold text-gray-900 leading-tight" id="renta-modal-cliente">Cliente</h2>
+                        <p class="text-sm text-pink-600 font-bold mt-1" id="renta-modal-vestido">Vestido</p>
+                        <div class="flex items-center gap-2 mt-2">
+                            <span id="renta-modal-id" class="text-[9px] bg-gray-100 px-2 py-0.5 rounded-lg text-gray-400 font-mono">ID</span>
+                            <span id="renta-badge-status" class="text-[9px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold hidden">FINALIZADA</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info financiera -->
+                <div class="bg-gray-50 p-4 rounded-2xl space-y-3 mb-4 border border-gray-100">
+                    <div class="flex justify-between items-center border-b border-gray-200 pb-3">
+                        <span class="text-xs text-gray-500 font-bold uppercase tracking-wide">Saldo Pendiente</span>
+                        <span id="renta-modal-saldo" class="text-2xl font-black text-red-500 font-display">$0</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 text-xs text-gray-600">
+                        <div class="bg-white p-2.5 rounded-xl border border-gray-100">
+                            <p class="text-gray-400 uppercase font-bold text-[9px] tracking-wider mb-0.5">Entrega</p>
+                            <b id="renta-modal-fecha-e" class="text-gray-800 text-sm">--/--/--</b>
+                        </div>
+                        <div class="bg-white p-2.5 rounded-xl border border-gray-100">
+                            <p class="text-gray-400 uppercase font-bold text-[9px] tracking-wider mb-0.5">Devolución</p>
+                            <b id="renta-modal-fecha-r" class="text-gray-800 text-sm">--/--/--</b>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ajustes -->
+                <div class="mb-5">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                        <span class="material-icons-round text-sm text-yellow-500">info</span>
+                        Ajustes / Notas
+                    </p>
+                    <div id="renta-modal-ajustes"
+                        class="w-full p-3 bg-yellow-50 border border-yellow-100 rounded-2xl text-xs text-yellow-800 italic leading-relaxed">
+                        Sin ajustes registrados.
+                    </div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="space-y-2.5">
+                    <button id="btn-whatsapp-renta" onclick="enviarTicketWhatsApp()"
+                        class="w-full py-3 rounded-2xl bg-green-500 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform">
+                        <span class="material-icons-round text-base">chat</span>
+                        Enviar Recordatorio por WhatsApp
+                    </button>
+
+                    <div id="zona-acciones-renta" class="space-y-2">
+                        <button id="btn-cobrar" onclick="cobrarDeudaJS()"
+                            class="w-full p-3.5 rounded-2xl bg-red-500 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-sm active:scale-95">
+                            <span class="material-icons-round text-base">attach_money</span>
+                            Registrar Pago Total
+                        </button>
+                        <button id="btn-finalizar" onclick="finalizarRentaJS()"
+                            class="w-full p-3.5 rounded-2xl bg-blue-600 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-sm active:scale-95 hidden">
+                            <span class="material-icons-round text-base">check</span>
+                            Finalizar y Enviar a Lavado
+                        </button>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="guardarEstadoRenta('Disponible')"
+                                class="p-3 rounded-2xl border border-gray-200 bg-white text-gray-700 text-xs font-bold flex flex-col items-center gap-1 active:scale-95">
+                                <span class="material-icons-round text-xl text-green-500">check_circle</span>
+                                Disponible
+                            </button>
+                            <button onclick="guardarEstadoRenta('Limpieza')"
+                                class="p-3 rounded-2xl border border-gray-200 bg-white text-gray-700 text-xs font-bold flex flex-col items-center gap-1 active:scale-95">
+                                <span class="material-icons-round text-xl text-yellow-500">local_laundry_service</span>
+                                Limpieza
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="cerrarModalRenta()"
+                    class="w-full py-4 text-gray-400 text-xs font-bold uppercase tracking-widest mt-3">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL HISTORIAL CLIENTE ===== -->
+    <div id="modal-cliente-historial" class="hidden fixed inset-0 bg-black/70 z-[70] flex items-end sm:items-center justify-center backdrop-blur-sm">
+        <div class="bg-white w-full sm:w-[420px] rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[88vh] flex flex-col">
+
+            <div class="flex justify-center pt-3 pb-1 sm:hidden">
+                <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
+            </div>
+
+            <div class="p-6 border-b border-gray-100">
+                <div class="flex items-center gap-4">
+                    <div class="h-14 w-14 rounded-2xl bg-pink-50 flex items-center justify-center text-pink-600 font-bold text-2xl border border-pink-100 font-display"
+                        id="cliente-modal-avatar">A</div>
+                    <div class="flex-1">
+                        <h2 class="font-display text-lg font-bold text-gray-900 leading-tight" id="cliente-modal-nombre">Nombre</h2>
+                        <p class="text-xs text-gray-400 font-mono mt-0.5" id="cliente-modal-id">ID</p>
+                        <a id="cliente-modal-whatsapp" href="#" target="_blank"
+                            class="inline-flex items-center gap-1.5 mt-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full text-xs font-bold border border-green-100">
+                            <span class="material-icons-round text-sm">chat</span> WhatsApp
+                        </a>
+>>>>>>> dca17f9ec85993c1ac1f32eff13e217d6549639f
+                    </div>
+                    <span id="cliente-total-rentas"
+                        class="bg-pink-50 text-pink-600 px-3 py-1 rounded-full text-[10px] font-bold border border-pink-100">
+                        0 Rentas
+                    </span>
                 </div>
 
                 <!-- TAB EDITAR -->
@@ -332,12 +508,27 @@
                 </div>
             </div>
 
+<<<<<<< HEAD
             <div class="p-4 border-t border-gray-100 flex-shrink-0">
                 <button onclick="cerrarModal()" class="w-full py-3 text-gray-400 text-xs font-bold uppercase tracking-widest">Cerrar</button>
+=======
+            <div class="px-6 pt-4 pb-2">
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Historial de Rentas</p>
+            </div>
+
+            <div id="lista-historial-cliente" class="overflow-y-auto flex-1 px-6 space-y-2 pb-4"></div>
+
+            <div class="p-4 border-t border-gray-100">
+                <button onclick="document.getElementById('modal-cliente-historial').classList.add('hidden')"
+                    class="w-full py-3 text-gray-400 text-xs font-bold uppercase tracking-widest">
+                    Cerrar Historial
+                </button>
+>>>>>>> dca17f9ec85993c1ac1f32eff13e217d6549639f
             </div>
         </div>
     </div>
 
+<<<<<<< HEAD
     <!-- ===== MODAL DETALLE RENTA ===== -->
     <div id="modal-renta-detalle" class="hidden fixed inset-0 bg-black/70 z-[60] flex items-end sm:items-center justify-center backdrop-blur-sm">
         <div class="bg-white w-full sm:w-[420px] rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] overflow-y-auto">
@@ -489,6 +680,21 @@
             Agregar
         </a>
     </div>
+=======
+    <!-- ===== BOTONES FLOTANTES ===== -->
+    <div class="fixed bottom-6 left-0 right-0 flex justify-between px-6 z-50 pointer-events-none">
+        <a href="nueva-renta.html"
+            class="pointer-events-auto flex items-center gap-2 bg-blue-600 text-white px-5 py-3.5 rounded-2xl shadow-lg shadow-blue-200 active:scale-90 transition-all font-bold text-sm">
+            <span class="material-icons-round">add_shopping_cart</span>
+            Nueva Renta
+        </a>
+        <a href="agregar.html"
+            class="pointer-events-auto flex items-center gap-2 bg-pink-600 text-white px-5 py-3.5 rounded-2xl shadow-lg shadow-pink-200 active:scale-90 transition-all font-bold text-sm">
+            <span class="material-icons-round">add</span>
+            Agregar
+        </a>
+    </div>
+>>>>>>> dca17f9ec85993c1ac1f32eff13e217d6549639f
 
     <script src="admin.js"></script>
 </body>
