@@ -3,7 +3,7 @@
 // Cache básico para que funcione más rápido
 // =============================================
 
-const CACHE_NAME = 'als-admin-v1';
+const CACHE_NAME = 'als-admin-v2';
 
 // Archivos que se guardan en caché para carga rápida
 const ARCHIVOS_CACHE = [
