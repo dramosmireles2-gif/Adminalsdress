@@ -127,19 +127,26 @@ function cerrarModal() {
 }
 async function guardarEstado(nuevoEstado) {
     if (!itemEditing) return;
+    const idArticulo = itemEditing.id_articulo;
+    const idx = datosGlobales.inventario.findIndex(i => i.id_articulo === idArticulo);
     cerrarModal();
-    const { error } = await sb.from('inventario').update({ estado_actual: nuevoEstado }).eq('id_articulo', itemEditing.id_articulo);
+    const { error } = await sb.from('inventario').update({ estado_actual: nuevoEstado }).eq('id_articulo', idArticulo);
     if (error) { Swal.fire('Error','No se pudo actualizar.','error'); return; }
-    const idx = datosGlobales.inventario.findIndex(i => i.id_articulo === itemEditing.id_articulo);
     if (idx !== -1) datosGlobales.inventario[idx].estado_actual = nuevoEstado;
     renderizarInventario(datosGlobales.inventario);
     Swal.fire({ icon:'success', title:'Marcado como ' + nuevoEstado, timer:1000, showConfirmButton:false });
 }
 async function cambiarVisibilidadWeb(publicado) {
     if (!itemEditing) return;
-    await sb.from('inventario').update({ publicado }).eq('id_articulo', itemEditing.id_articulo);
-    const idx = datosGlobales.inventario.findIndex(i => i.id_articulo === itemEditing.id_articulo);
-    if (idx !== -1) datosGlobales.inventario[idx].publicado = publicado;
+    const idArticulo = itemEditing.id_articulo;
+    const { error } = await sb.from('inventario').update({ publicado }).eq('id_articulo', idArticulo);
+    if (error) { Swal.fire('Error','No se pudo cambiar visibilidad.','error'); return; }
+    const idx = datosGlobales.inventario.findIndex(i => i.id_articulo === idArticulo);
+    if (idx !== -1) {
+        datosGlobales.inventario[idx].publicado = publicado;
+        itemEditing.publicado = publicado;
+    }
+    renderizarInventario(datosGlobales.inventario);
 }
 
 function renderizarRentas(lista) {
