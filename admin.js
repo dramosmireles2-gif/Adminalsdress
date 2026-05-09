@@ -117,10 +117,13 @@ function abrirModal(item) {
     if (toggle) toggle.checked = !!item.publicado;
 
     // Precargar campos de edición
-    document.getElementById('edit-nombre').value  = item.nombre || '';
-    document.getElementById('edit-precio').value  = item.precio_base || '';
-    document.getElementById('edit-talla').value   = item.talla || '';
-    document.getElementById('edit-color').value   = item.color || '';
+    document.getElementById('edit-nombre').value        = item.nombre || '';
+    document.getElementById('edit-precio').value        = item.precio_base || '';
+    document.getElementById('edit-color').value         = item.color || '';
+    document.getElementById('edit-precio-venta').value  = item.precio_venta || '';
+    document.getElementById('edit-tipo').value          = item.tipo || 'Vestido';
+    actualizarTallaEdicion();
+    document.getElementById('edit-talla').value         = item.talla || '';
 
     // Resetear al tab de estado
     cambiarTabModal('estado');
@@ -421,8 +424,12 @@ function renderizarDashboard() {
     const rentas = datosGlobales.rentas;
     const totalIngresos = rentas.reduce((s,r) => s+(parseFloat(r.abono)||0),0);
     const totalDeuda    = rentas.filter(r=>r.estatus_renta==='Activa').reduce((s,r) => s+(parseFloat(r.saldo_pendiente)||0),0);
-    document.getElementById('kpi-ingresos').textContent = '$'+totalIngresos.toLocaleString('es-MX');
-    document.getElementById('kpi-deuda').textContent    = '$'+totalDeuda.toLocaleString('es-MX');
+    const vendidos      = datosGlobales.inventario.filter(i => i.estado_actual === 'Vendido');
+    const totalVentas   = vendidos.reduce((s,i) => s+(parseFloat(i.precio_venta)||0),0);
+    document.getElementById('kpi-ingresos').textContent  = '$'+totalIngresos.toLocaleString('es-MX');
+    document.getElementById('kpi-deuda').textContent     = '$'+totalDeuda.toLocaleString('es-MX');
+    document.getElementById('kpi-ventas').textContent    = '$'+totalVentas.toLocaleString('es-MX');
+    document.getElementById('kpi-vendidos').textContent  = vendidos.length + ' vendido' + (vendidos.length !== 1 ? 's' : '');
     const porMes = {};
     rentas.forEach(r => { if (!r.fecha_entrega) return; const m = r.fecha_entrega.substring(0,7); porMes[m]=(porMes[m]||0)+(parseFloat(r.abono)||0); });
     const meses  = Object.keys(porMes).sort().slice(-6);
@@ -435,6 +442,28 @@ function renderizarDashboard() {
     if (ctxE) { if (ctxE._ci) ctxE._ci.destroy(); ctxE._ci = new Chart(ctxE,{ type:'doughnut', data:{ labels:['Disponible','Rentado','Limpieza'], datasets:[{ data:[estados.Disponible,estados.Rentado,estados.Limpieza], backgroundColor:['#22c55e','#3b82f6','#eab308'], borderWidth:0 }] }, options:{ plugins:{legend:{position:'bottom'}}, cutout:'65%' } }); }
 }
 
+
+// ---- TALLA DINÁMICA EN EDICIÓN ----
+function actualizarTallaEdicion() {
+    const tipo      = document.getElementById('edit-tipo').value;
+    const select    = document.getElementById('edit-talla');
+    const contenedor = document.getElementById('edit-contenedor-talla');
+    select.innerHTML = '';
+    if (tipo === 'Vestido') {
+        contenedor.style.display = 'block';
+        ['2XS','XS','S','M','L','XL','2XL','3XL','4XL'].forEach(t => {
+            const o = document.createElement('option'); o.value = t; o.text = t; select.add(o);
+        });
+    } else if (tipo === 'Zapato') {
+        contenedor.style.display = 'block';
+        for (let i = 2; i <= 7; i += 0.5) {
+            const o = document.createElement('option'); o.value = String(i); o.text = i + ' MX'; select.add(o);
+        }
+    } else {
+        contenedor.style.display = 'none';
+        const o = document.createElement('option'); o.value = 'UNI'; o.text = 'Única'; select.add(o);
+    }
+}
 
 // ---- TABS DEL MODAL ----
 function cambiarTabModal(tab) {
@@ -457,27 +486,31 @@ async function guardarEdicion() {
     if (!itemEditing) return;
     const item = { ...itemEditing };
 
-    const nombre = document.getElementById('edit-nombre').value.trim();
-    const precio = parseFloat(document.getElementById('edit-precio').value) || null;
-    const talla  = document.getElementById('edit-talla').value.trim();
-    const color  = document.getElementById('edit-color').value.trim();
+    const nombre       = document.getElementById('edit-nombre').value.trim();
+    const precio       = parseFloat(document.getElementById('edit-precio').value) || null;
+    const talla        = document.getElementById('edit-talla').value;
+    const color        = document.getElementById('edit-color').value.trim();
+    const tipo         = document.getElementById('edit-tipo').value;
+    const precio_venta = parseFloat(document.getElementById('edit-precio-venta').value) || null;
 
     if (!nombre) return Swal.fire('Falta el nombre', 'El nombre no puede estar vacío.', 'warning');
 
     Swal.fire({ title: 'Guardando...', didOpen: () => Swal.showLoading() });
 
     const { error } = await sb.from('inventario').update({
-        nombre, precio_base: precio, talla, color
+        nombre, precio_base: precio, talla, color, tipo, precio_venta
     }).eq('id_articulo', item.id_articulo);
 
     if (error) { Swal.fire('Error', 'No se pudo guardar.', 'error'); return; }
 
     const idx = datosGlobales.inventario.findIndex(i => i.id_articulo === item.id_articulo);
     if (idx !== -1) {
-        datosGlobales.inventario[idx].nombre      = nombre;
-        datosGlobales.inventario[idx].precio_base = precio;
-        datosGlobales.inventario[idx].talla       = talla;
-        datosGlobales.inventario[idx].color       = color;
+        datosGlobales.inventario[idx].nombre       = nombre;
+        datosGlobales.inventario[idx].precio_base  = precio;
+        datosGlobales.inventario[idx].talla        = talla;
+        datosGlobales.inventario[idx].color        = color;
+        datosGlobales.inventario[idx].tipo         = tipo;
+        datosGlobales.inventario[idx].precio_venta = precio_venta;
     }
 
     cerrarModal();

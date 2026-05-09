@@ -198,12 +198,21 @@
 
             <div class="grid grid-cols-2 gap-3">
                 <div class="kpi-card bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Ingresos Totales</p>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Ingresos Renta</p>
                     <h3 class="text-2xl font-black text-gray-900 mt-1 font-display" id="kpi-ingresos">$0</h3>
                 </div>
                 <div class="kpi-card deuda bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                     <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Por Cobrar</p>
                     <h3 class="text-2xl font-black text-red-500 mt-1 font-display" id="kpi-deuda">$0</h3>
+                </div>
+            </div>
+            <div class="kpi-card bg-white p-4 rounded-2xl shadow-sm border border-gray-100" style="border-left-color:#7c3aed">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Ingresos por Ventas</p>
+                        <h3 class="text-2xl font-black text-purple-600 mt-1 font-display" id="kpi-ventas">$0</h3>
+                    </div>
+                    <span id="kpi-vendidos" class="text-[10px] bg-purple-50 text-purple-600 px-2.5 py-1 rounded-full font-bold border border-purple-100">0 vendidos</span>
                 </div>
             </div>
 
@@ -302,20 +311,43 @@
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="text-xs font-bold text-gray-600 ml-1">Precio</label>
+                            <label class="text-xs font-bold text-gray-600 ml-1">Tipo</label>
+                            <select id="edit-tipo" onchange="actualizarTallaEdicion()" class="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all cursor-pointer">
+                                <option value="Vestido">👗 Vestido</option>
+                                <option value="Zapato">👠 Zapato</option>
+                                <option value="Bolsa">👜 Bolsa</option>
+                                <option value="Accesorios">💍 Accesorios</option>
+                            </select>
+                        </div>
+                        <div id="edit-contenedor-talla">
+                            <label class="text-xs font-bold text-gray-600 ml-1">Talla</label>
+                            <select id="edit-talla" class="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all cursor-pointer font-bold text-gray-800"></select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-xs font-bold text-gray-600 ml-1">Color</label>
+                            <input type="text" id="edit-color" list="edit-colores-list" autocomplete="off" class="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
+                            <datalist id="edit-colores-list">
+                                <option value="Negro"><option value="Blanco"><option value="Rojo">
+                                <option value="Azul Rey"><option value="Verde Esmeralda"><option value="Rosa Palo">
+                                <option value="Dorado"><option value="Plateado"><option value="Vino">
+                            </datalist>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-gray-600 ml-1">Precio Renta</label>
                             <div class="relative mt-1">
                                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">$</span>
                                 <input type="number" id="edit-precio" class="w-full p-3 pl-7 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
                             </div>
                         </div>
-                        <div>
-                            <label class="text-xs font-bold text-gray-600 ml-1">Talla</label>
-                            <input type="text" id="edit-talla" class="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
-                        </div>
                     </div>
                     <div>
-                        <label class="text-xs font-bold text-gray-600 ml-1">Color</label>
-                        <input type="text" id="edit-color" class="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
+                        <label class="text-xs font-bold text-gray-600 ml-1">Precio Venta <span class="text-gray-400 font-normal">(opcional)</span></label>
+                        <div class="relative mt-1">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400 text-sm pointer-events-none">$</span>
+                            <input type="number" id="edit-precio-venta" placeholder="Sin definir" class="w-full p-3 pl-7 bg-purple-50 border border-purple-100 rounded-xl text-sm focus:outline-none focus:border-purple-400 transition-all">
+                        </div>
                     </div>
                     <button onclick="guardarEdicion()" class="w-full py-3.5 bg-gray-900 text-white font-bold rounded-2xl text-sm hover:bg-pink-600 active:scale-95 transition-all flex items-center justify-center gap-2 mt-2">
                         <span class="material-icons-round text-base">save</span>Guardar Cambios
