@@ -160,6 +160,8 @@
                         Limpieza
                     </button>
                 </div>
+                <!-- Filtro talla (dinámico) -->
+                <div id="filtro-tallas-container" class="flex gap-1.5 mt-2 overflow-x-auto pb-1 no-scrollbar min-h-[26px]"></div>
             </div>
             <div id="lista-admin" class="space-y-2">
                 <p class="text-center text-gray-400 mt-10 text-sm animate-pulse">Cargando inventario...</p>
@@ -414,23 +416,44 @@
 
                 <!-- Ajustes -->
                 <div class="mb-5">
-                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                        <span class="material-icons-round text-sm text-yellow-500">info</span>
-                        Ajustes / Notas
-                    </p>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                            <span class="material-icons-round text-sm text-yellow-500">info</span>
+                            Ajustes / Notas
+                        </p>
+                        <button id="btn-editar-ajustes" onclick="toggleEditarAjustes()"
+                            class="text-[10px] font-bold text-pink-500 px-2 py-0.5 rounded-lg hover:bg-pink-50 transition-colors">
+                            Editar
+                        </button>
+                    </div>
                     <div id="renta-modal-ajustes"
                         class="w-full p-3 bg-yellow-50 border border-yellow-100 rounded-2xl text-xs text-yellow-800 italic leading-relaxed">
                         Sin ajustes registrados.
+                    </div>
+                    <div id="ajustes-edit-section" class="hidden space-y-2">
+                        <textarea id="ajustes-textarea" rows="3"
+                            class="w-full p-3 bg-yellow-50 border border-yellow-300 rounded-2xl text-xs text-yellow-800 leading-relaxed resize-none focus:outline-none focus:border-yellow-500 transition-all"></textarea>
+                        <button onclick="guardarAjustesRenta()"
+                            class="w-full py-2.5 bg-yellow-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-transform flex items-center justify-center gap-1.5">
+                            <span class="material-icons-round text-sm">save</span>Guardar Ajustes
+                        </button>
                     </div>
                 </div>
 
                 <!-- Acciones -->
                 <div class="space-y-2.5">
-                    <button id="btn-whatsapp-renta" onclick="enviarTicketWhatsApp()"
-                        class="w-full py-3 rounded-2xl bg-green-500 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform">
-                        <span class="material-icons-round text-base">chat</span>
-                        Enviar Recordatorio por WhatsApp
-                    </button>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="btn-whatsapp-renta" onclick="enviarTicketWhatsApp()"
+                            class="w-full py-3 rounded-2xl bg-green-500 text-white text-sm font-bold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-transform">
+                            <span class="material-icons-round text-base">chat</span>
+                            Recordatorio
+                        </button>
+                        <button id="btn-recibo-renta" onclick="enviarReciboWhatsApp()"
+                            class="w-full py-3 rounded-2xl bg-blue-500 text-white text-sm font-bold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-transform hidden">
+                            <span class="material-icons-round text-base">receipt</span>
+                            Recibo
+                        </button>
+                    </div>
 
                     <div id="zona-acciones-renta" class="space-y-2">
                         <button id="btn-cobrar" onclick="cobrarDeudaJS()"

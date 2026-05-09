@@ -62,21 +62,52 @@ function cambiarTab(tab) {
     }
 }
 
-let filtroActual = '';
-let tipoActual    = '';
+let filtroActual      = '';
+let tipoActual        = '';
+let filtroTallaActual = '';
 
-function filtrarTipo(tipo) { tipoActual = tipo; renderizarInventario(datosGlobales.inventario); }
+function filtrarTipo(tipo) { tipoActual = tipo; filtroTallaActual = ''; renderizarInventario(datosGlobales.inventario); }
+function filtrarTalla(talla) { filtroTallaActual = talla; renderizarInventario(datosGlobales.inventario); }
+
+function renderizarFiltroTallas(lista) {
+    const container = document.getElementById('filtro-tallas-container');
+    if (!container) return;
+    const tallas = [...new Set(lista.map(i => i.talla).filter(t => t && t !== 'UNI'))].sort((a, b) => {
+        const order = ['2XS','XS','S','M','L','XL','2XL','3XL','4XL'];
+        const ia = order.indexOf(a), ib = order.indexOf(b);
+        if (ia !== -1 && ib !== -1) return ia - ib;
+        if (ia !== -1) return -1;
+        if (ib !== -1) return 1;
+        return parseFloat(a) - parseFloat(b);
+    });
+    if (!tallas.length) { container.innerHTML = ''; return; }
+    container.innerHTML = '';
+    const btnTodo = document.createElement('button');
+    btnTodo.className = 'whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-bold transition-all ' + (!filtroTallaActual ? 'bg-pink-600 text-white' : 'bg-white border border-gray-200 text-gray-500');
+    btnTodo.textContent = 'Todas';
+    btnTodo.onclick = () => filtrarTalla('');
+    container.appendChild(btnTodo);
+    tallas.forEach(t => {
+        const btn = document.createElement('button');
+        btn.className = 'whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-bold transition-all ' + (filtroTallaActual === t ? 'bg-pink-600 text-white' : 'bg-white border border-gray-200 text-gray-600');
+        btn.textContent = t;
+        btn.onclick = () => filtrarTalla(t);
+        container.appendChild(btn);
+    });
+}
 
 function renderizarInventario(lista) {
     const contenedor = document.getElementById('lista-admin');
     if (!contenedor) return;
     const busqueda = (document.getElementById('buscador')?.value || '').toLowerCase();
-    const filtrada = lista.filter(i => {
+    const prefiltrada = lista.filter(i => {
         const txt  = !busqueda || (i.nombre||'').toLowerCase().includes(busqueda) || (i.id_articulo||'').toLowerCase().includes(busqueda);
         const est  = !filtroActual || i.estado_actual === filtroActual;
         const tipo = !tipoActual   || (i.tipo || 'Vestido') === tipoActual;
         return txt && est && tipo;
     });
+    renderizarFiltroTallas(prefiltrada);
+    const filtrada = prefiltrada.filter(i => !filtroTallaActual || i.talla === filtroTallaActual);
     if (!filtrada.length) {
         contenedor.innerHTML = '<p class="text-center text-gray-400 py-10 text-sm italic">No se encontraron artículos.</p>';
         return;
@@ -207,10 +238,16 @@ function abrirModalRenta(r) {
     document.getElementById('renta-modal-fecha-e').textContent = r.fecha_entrega || '—';
     document.getElementById('renta-modal-fecha-r').textContent = r.fecha_retorno || '—';
     document.getElementById('renta-modal-ajustes').textContent = r.ajustes || 'Sin ajustes registrados.';
+    // Resetear editor de ajustes
+    document.getElementById('ajustes-edit-section').classList.add('hidden');
+    document.getElementById('renta-modal-ajustes').classList.remove('hidden');
+    document.getElementById('btn-editar-ajustes').textContent = 'Editar';
+
     const tel = cliente?.telefono;
     const btnWA = document.getElementById('btn-whatsapp-renta');
     if (tel) { btnWA.onclick = () => enviarRecordatorioWhatsApp(cliente, r, vestido); btnWA.classList.remove('hidden'); }
     else { btnWA.classList.add('hidden'); }
+    document.getElementById('btn-recibo-renta').classList.toggle('hidden', !tel);
     const saldo = parseFloat(r.saldo_pendiente) || 0;
     const esActiva = r.estatus_renta === 'Activa';
     document.getElementById('renta-badge-status').classList.toggle('hidden', r.estatus_renta !== 'Finalizada');
@@ -326,6 +363,70 @@ async function finalizarRentaJS() {
     renderizarRentas(datosGlobales.rentas);
     Swal.fire({ icon:'success', title:'¡Renta finalizada!', text:'Vestido enviado a limpieza.', timer:1500, showConfirmButton:false });
 }
+function toggleEditarAjustes() {
+    const vista   = document.getElementById('renta-modal-ajustes');
+    const editor  = document.getElementById('ajustes-edit-section');
+    const btn     = document.getElementById('btn-editar-ajustes');
+    const editing = !editor.classList.contains('hidden');
+    if (editing) {
+        editor.classList.add('hidden');
+        vista.classList.remove('hidden');
+        btn.textContent = 'Editar';
+    } else {
+        document.getElementById('ajustes-textarea').value = rentaEditing?.ajustes || '';
+        editor.classList.remove('hidden');
+        vista.classList.add('hidden');
+        btn.textContent = 'Cancelar';
+        document.getElementById('ajustes-textarea').focus();
+    }
+}
+
+async function guardarAjustesRenta() {
+    if (!rentaEditing) return;
+    const ajustes = document.getElementById('ajustes-textarea').value.trim();
+    const { error } = await sb.from('rentas').update({ ajustes }).eq('id_renta', rentaEditing.id_renta);
+    if (error) { Swal.fire('Error', 'No se pudo guardar.', 'error'); return; }
+    rentaEditing.ajustes = ajustes;
+    const idx = datosGlobales.rentas.findIndex(r => r.id_renta === rentaEditing.id_renta);
+    if (idx !== -1) datosGlobales.rentas[idx].ajustes = ajustes;
+    document.getElementById('renta-modal-ajustes').textContent = ajustes || 'Sin ajustes registrados.';
+    document.getElementById('ajustes-edit-section').classList.add('hidden');
+    document.getElementById('renta-modal-ajustes').classList.remove('hidden');
+    document.getElementById('btn-editar-ajustes').textContent = 'Editar';
+    Swal.fire({ icon: 'success', title: '¡Ajustes guardados!', timer: 900, showConfirmButton: false });
+}
+
+function enviarReciboWhatsApp() {
+    if (!rentaEditing) return;
+    const r       = rentaEditing;
+    const cliente = datosGlobales.clientes.find(c => c.id_cliente === r.id_cliente);
+    const tel     = (cliente?.telefono || '').replace(/\D/g, '');
+    if (!tel) { Swal.fire('Sin teléfono', 'El cliente no tiene teléfono registrado.', 'warning'); return; }
+    const num     = tel.length === 10 ? '52' + tel : tel;
+    const total   = parseFloat(r.total_renta) || 0;
+    const abono   = parseFloat(r.abono) || 0;
+    const saldo   = parseFloat(r.saldo_pendiente) || 0;
+    const lineas  = [
+        `🧾 *RECIBO DE RENTA — ALS DRESS*`,
+        ``,
+        `👤 ${cliente?.nombre_completo || r.id_cliente}`,
+        `👗 ${nombreArticulo(r.id_articulo)}`,
+        `🔢 Folio: ${r.id_renta}`,
+        ``,
+        `📅 Evento: ${r.fecha_evento || '—'}`,
+        `📤 Entrega: ${r.fecha_entrega || '—'}`,
+        `📥 Devolución: ${r.fecha_retorno || '—'}`,
+        ``,
+        `💰 Total: $${total.toFixed(0)}`,
+        `✅ Abonado: $${abono.toFixed(0)}`,
+        `${saldo > 0 ? '⚠️' : '✅'} Saldo: $${saldo.toFixed(0)}`,
+    ];
+    if (r.ajustes) lineas.push(``, `✂️ Ajustes: ${r.ajustes}`);
+    if (r.documento_garantia) lineas.push(`📌 Garantía: ${r.documento_garantia}`);
+    lineas.push(``, `¡Gracias por confiar en Als Dress! 💕`);
+    window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(lineas.join('\n')), '_blank');
+}
+
 function enviarRecordatorioWhatsApp(cliente, renta, vestido) {
     const tel = (cliente.telefono||'').replace(/\D/g,'');
     const num = tel.length === 10 ? '52'+tel : tel;
