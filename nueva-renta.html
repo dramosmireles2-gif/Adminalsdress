@@ -90,23 +90,60 @@
                 <input type="hidden" id="nombre_cliente" name="nombre_cliente">
             </div>
 
+            <!-- BANNER CRÉDITO A FAVOR -->
+            <div id="banner-credito" class="hidden bg-indigo-50 border border-indigo-200 rounded-2xl p-3.5 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <span class="material-icons-round text-indigo-500 text-2xl">savings</span>
+                    <div>
+                        <p class="text-xs font-bold text-indigo-700">Crédito a favor disponible</p>
+                        <p id="credito-monto" class="text-lg font-black text-indigo-600">$0</p>
+                    </div>
+                </div>
+                <button type="button" onclick="aplicarCredito()"
+                    class="bg-indigo-600 text-white text-xs font-bold px-3 py-2 rounded-xl active:scale-95 transition-transform">
+                    Aplicar
+                </button>
+            </div>
+
             <!-- ARTÍCULO -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                    <span class="material-icons-round text-sm text-pink-400">checkroom</span>
-                    Artículo a Rentar
-                </p>
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <span class="material-icons-round text-sm text-pink-400">checkroom</span>
+                        Artículo a Rentar
+                    </p>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <span class="text-[10px] font-bold text-gray-500">No inventariado</span>
+                        <div class="relative">
+                            <input type="checkbox" id="toggle-externo" class="sr-only peer" onchange="toggleModoExterno()">
+                            <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:bg-pink-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4"></div>
+                        </div>
+                    </label>
+                </div>
 
-                <div class="relative">
-                    <div id="dropdown-btn" onclick="toggleDropdown()"
-                        class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 flex justify-between items-center cursor-pointer hover:border-pink-300 transition-colors">
-                        <span id="selected-text" class="text-sm text-gray-500">Toca para elegir artículo...</span>
-                        <span class="material-icons-round text-gray-400 text-xl">expand_more</span>
+                <!-- Dropdown inventario -->
+                <div id="seccion-inventario">
+                    <div class="relative">
+                        <div id="dropdown-btn" onclick="toggleDropdown()"
+                            class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 flex justify-between items-center cursor-pointer hover:border-pink-300 transition-colors">
+                            <span id="selected-text" class="text-sm text-gray-500">Toca para elegir artículo...</span>
+                            <span class="material-icons-round text-gray-400 text-xl">expand_more</span>
+                        </div>
+                        <div id="dropdown-list" class="hidden absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-xl z-[100] max-h-72 overflow-y-auto no-scrollbar">
+                            <div id="lista-items"></div>
+                        </div>
                     </div>
+                </div>
 
-                    <!-- Dropdown artículos -->
-                    <div id="dropdown-list" class="hidden absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-xl z-[100] max-h-72 overflow-y-auto no-scrollbar">
-                        <div id="lista-items"></div>
+                <!-- Campos vestido externo -->
+                <div id="seccion-externo" class="hidden space-y-2">
+                    <input type="text" id="nombre-externo" placeholder="Nombre del vestido..."
+                        class="campo w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm transition-all">
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">$</span>
+                        <input type="number" id="precio-externo" placeholder="Precio acordado"
+                            class="campo w-full p-3 pl-7 bg-gray-50 border border-gray-200 rounded-xl text-sm transition-all"
+                            oninput="document.getElementById('total').value=this.value; calcularSaldos()">
                     </div>
                 </div>
 

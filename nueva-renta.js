@@ -1,21 +1,16 @@
 // =============================================
 // nueva-renta.js — Supabase
-
-function obtenerUrlFoto(foto) {
-    if (!foto) return 'https://placehold.co/50x60/f5f1eb/8a8a8e?text=Foto';
-    if (foto.startsWith('http')) return foto;
-    return `https://www.appsheet.com/template/gettablefileurl?appName=RentaVestidosAPP-250346467&tableName=Inventario&fileName=${encodeURIComponent(foto)}`;
-}
-
-
-function obtenerUrlFoto(foto) {
-    if (!foto) return 'https://placehold.co/50x60/f5f1eb/8a8a8e?text=Foto';
-    if (foto.startsWith('http')) return foto;
-    return `https://www.appsheet.com/template/gettablefileurl?appName=RentaVestidosAPP-250346467&tableName=Inventario&fileName=${encodeURIComponent(foto)}`;
-}
 // =============================================
 
-let clientesData = [];
+function obtenerUrlFoto(foto) {
+    if (!foto) return 'https://placehold.co/50x60/f5f1eb/8a8a8e?text=Foto';
+    if (foto.startsWith('http')) return foto;
+    return `https://www.appsheet.com/template/gettablefileurl?appName=RentaVestidosAPP-250346467&tableName=Inventario&fileName=${encodeURIComponent(foto)}`;
+}
+
+let clientesData       = [];
+let creditoDisponible  = 0;
+let creditoAplicado    = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Verificar sesión
@@ -38,6 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Cargar datos
     await cargarInventario();
     await cargarClientes();
+    await cargarCreditosClientes();
 
     // Listeners de cálculo
     ['total','descuento','abono'].forEach(id => {
@@ -45,6 +41,51 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (el) el.addEventListener('input', calcularSaldos);
     });
 });
+
+// ---- CRÉDITOS ----
+let creditosData = [];
+async function cargarCreditosClientes() {
+    const { data } = await sb.from('rentas').select('id_cliente,abono,estatus_renta').eq('estatus_renta', 'Credito');
+    creditosData = data || [];
+}
+
+function verificarCredito(idCliente) {
+    creditoDisponible = creditosData
+        .filter(r => r.id_cliente === idCliente)
+        .reduce((s, r) => s + (parseFloat(r.abono) || 0), 0);
+    creditoAplicado = false;
+    const banner = document.getElementById('banner-credito');
+    if (creditoDisponible > 0) {
+        document.getElementById('credito-monto').textContent = '$' + creditoDisponible.toFixed(0);
+        banner.classList.remove('hidden');
+    } else {
+        banner.classList.add('hidden');
+    }
+}
+
+function aplicarCredito() {
+    const total  = parseFloat(document.getElementById('total').value) || 0;
+    const aplicar = Math.min(creditoDisponible, total);
+    document.getElementById('descuento').value = aplicar;
+    calcularSaldos();
+    creditoAplicado = true;
+    const btn = document.querySelector('#banner-credito button');
+    if (btn) { btn.textContent = '✓ Aplicado'; btn.disabled = true; btn.classList.add('opacity-50'); }
+}
+
+// ---- MODO EXTERNO ----
+function toggleModoExterno() {
+    const esExterno = document.getElementById('toggle-externo').checked;
+    document.getElementById('seccion-inventario').classList.toggle('hidden', esExterno);
+    document.getElementById('seccion-externo').classList.toggle('hidden', !esExterno);
+    document.getElementById('id_articulo').value      = '';
+    document.getElementById('nombre_articulo').value  = '';
+    document.getElementById('selected-text').textContent = 'Toca para elegir artículo...';
+    if (!esExterno) {
+        document.getElementById('nombre-externo').value = '';
+        document.getElementById('precio-externo').value = '';
+    }
+}
 
 // ---- INVENTARIO ----
 async function cargarInventario() {
@@ -160,6 +201,7 @@ function renderizarListaClientes(lista) {
             document.getElementById('nombre_cliente').value  = c.nombre_completo;
             document.getElementById('cliente-seleccionado').textContent = c.nombre_completo;
             document.getElementById('cliente-dropdown')?.classList.add('hidden');
+            verificarCredito(c.id_cliente);
         };
         contenedor.appendChild(div);
     });
@@ -209,13 +251,21 @@ window.addEventListener('click', (e) => {
 document.getElementById('form-renta')?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const idCliente  = document.getElementById('id_cliente').value;
-    const idArticulo = document.getElementById('id_articulo').value;
+    const idCliente   = document.getElementById('id_cliente').value;
     const fechaEvento = document.getElementById('fecha_evento').value;
+    const esExterno   = document.getElementById('toggle-externo').checked;
 
-    if (!idCliente)   return Swal.fire('Falta Cliente',  'Por favor selecciona un cliente.', 'warning');
-    if (!idArticulo)  return Swal.fire('Falta Vestido',  'Por favor selecciona un artículo.', 'warning');
-    if (!fechaEvento) return Swal.fire('Falta Fecha',    'Indica la fecha del evento.', 'warning');
+    let idArticulo = document.getElementById('id_articulo').value;
+
+    if (esExterno) {
+        const nombreExt = document.getElementById('nombre-externo').value.trim();
+        if (!nombreExt) return Swal.fire('Falta nombre', 'Escribe el nombre del vestido.', 'warning');
+        idArticulo = 'EXT:' + nombreExt;
+    }
+
+    if (!idCliente)   return Swal.fire('Falta Cliente', 'Por favor selecciona un cliente.', 'warning');
+    if (!idArticulo)  return Swal.fire('Falta Vestido', 'Por favor selecciona un artículo.', 'warning');
+    if (!fechaEvento) return Swal.fire('Falta Fecha',   'Indica la fecha del evento.', 'warning');
 
     Swal.fire({ title: 'Guardando Renta...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
@@ -240,16 +290,34 @@ document.getElementById('form-renta')?.addEventListener('submit', async (e) => {
         });
         if (rentaError) throw rentaError;
 
-        // 2. Marcar vestido como Rentado
-        const { error: invError } = await sb.from('inventario')
-            .update({ estado_actual: 'Rentado' })
-            .eq('id_articulo', idArticulo);
-        if (invError) throw invError;
+        // 2. Marcar como Rentado solo si es vestido inventariado
+        if (!esExterno) {
+            await sb.from('inventario').update({ estado_actual: 'Rentado' }).eq('id_articulo', idArticulo);
+        }
+
+        // 3. Si se aplicó crédito, marcar entradas de crédito como usadas
+        if (creditoAplicado && creditoDisponible > 0) {
+            const descAplicado = parseFloat(document.getElementById('descuento').value) || 0;
+            await sb.from('rentas')
+                .update({ estatus_renta: 'Credito Usado' })
+                .eq('id_cliente', idCliente)
+                .eq('estatus_renta', 'Credito');
+            const remanente = creditoDisponible - descAplicado;
+            if (remanente > 0.01) {
+                await sb.from('rentas').insert({
+                    id_renta: 'CRED-' + Date.now().toString(16).slice(-8).toUpperCase(),
+                    id_cliente: idCliente, id_articulo: 'CREDITO', estatus_renta: 'Credito',
+                    abono: remanente, saldo_pendiente: 0, total_renta: remanente, descuento: 0,
+                    fecha_evento: fechaEvento, fecha_entrega: fechaEvento, fecha_retorno: fechaEvento,
+                    documento_garantia: '', ajustes: 'Crédito remanente'
+                });
+            }
+        }
 
         Swal.fire({
             icon: 'success',
             title: '¡Renta Guardada!',
-            text: 'El inventario ha sido actualizado.',
+            text: esExterno ? 'Renta registrada.' : 'El inventario ha sido actualizado.',
             confirmButtonText: 'Volver al Admin',
             confirmButtonColor: '#d63384'
         }).then(() => { window.location.href = 'admin.html'; });
