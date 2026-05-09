@@ -7,12 +7,22 @@ let itemEditing  = null;
 let rentaEditing = null;
 let calendarInst = null;
 
-function nombreArticulo(idArticulo) {
-    if (!idArticulo) return '—';
-    if (idArticulo.startsWith('EXT:')) return idArticulo.slice(4) + ' ✦';
-    if (idArticulo === 'CREDITO') return 'Crédito a favor';
-    const item = datosGlobales.inventario.find(i => i.id_articulo === idArticulo);
-    return item?.nombre || idArticulo;
+function nombreArticulo(r) {
+    // Acepta tanto un objeto renta como un string de id_articulo (compat)
+    const id = typeof r === 'string' ? r : r?.id_articulo;
+    if (!id) {
+        // id_articulo null = vestido externo o crédito
+        if (typeof r === 'object') {
+            if (r?.estatus_renta === 'Credito' || r?.estatus_renta === 'Credito Usado') return 'Crédito a favor';
+            const firstLine = (r?.ajustes || '').split('\n')[0].trim();
+            return firstLine ? firstLine + ' ✦' : 'Vestido externo ✦';
+        }
+        return '—';
+    }
+    if (id === 'CREDITO') return 'Crédito a favor'; // compat con registros viejos
+    if (id.startsWith('EXT:')) return id.slice(4) + ' ✦'; // compat con registros viejos
+    const item = datosGlobales.inventario.find(i => i.id_articulo === id);
+    return item?.nombre || id;
 }
 
 // ---- HELPER: URL de foto (AppSheet + Supabase + HTTP) ----
@@ -210,7 +220,7 @@ function renderizarRentas(lista) {
         card.innerHTML = `<img src="${fotoUrl}" class="w-14 h-16 rounded-xl object-cover bg-gray-100 flex-shrink-0" onerror="this.src='https://placehold.co/60x72/f5f1eb/8a8a8e?text=Foto'">
             <div class="flex-1 min-w-0">
                 <p class="font-bold text-gray-900 text-sm truncate">${cliente?.nombre_completo||r.id_cliente||'—'}</p>
-                <p class="text-xs text-pink-600 font-medium truncate mt-0.5">${nombreArticulo(r.id_articulo)}</p>
+                <p class="text-xs text-pink-600 font-medium truncate mt-0.5">${nombreArticulo(r)}</p>
                 <div class="flex gap-2 mt-1.5 text-[10px] text-gray-400">
                     <span>📅 ${r.fecha_evento||'—'}</span>
                     <span>↩ ${r.fecha_retorno||'—'}</span>
@@ -232,7 +242,7 @@ function abrirModalRenta(r) {
     const fotoUrl = obtenerUrlFoto(vestido?.foto, 'lg');
     document.getElementById('renta-modal-foto').src           = fotoUrl;
     document.getElementById('renta-modal-cliente').textContent = cliente?.nombre_completo || r.id_cliente;
-    document.getElementById('renta-modal-vestido').textContent = nombreArticulo(r.id_articulo);
+    document.getElementById('renta-modal-vestido').textContent = nombreArticulo(r);
     document.getElementById('renta-modal-id').textContent      = r.id_renta;
     document.getElementById('renta-modal-saldo').textContent   = '$' + (parseFloat(r.saldo_pendiente)||0).toFixed(2);
     document.getElementById('renta-modal-fecha-e').textContent = r.fecha_entrega || '—';
@@ -308,7 +318,7 @@ async function cancelarRentaJS() {
     if (result.isDenied && abono > 0) {
         const credEntry = {
             id_renta: 'CRED-' + Date.now().toString(16).slice(-8).toUpperCase(),
-            id_cliente: r.id_cliente, id_articulo: 'CREDITO', estatus_renta: 'Credito',
+            id_cliente: r.id_cliente, id_articulo: null, estatus_renta: 'Credito',
             abono, saldo_pendiente: 0, total_renta: abono, descuento: 0,
             fecha_evento: new Date().toISOString().split('T')[0],
             fecha_entrega: new Date().toISOString().split('T')[0],
@@ -319,7 +329,7 @@ async function cancelarRentaJS() {
         if (credData) datosGlobales.rentas.push(credData);
     }
 
-    if (r.id_articulo && !r.id_articulo.startsWith('EXT:') && r.id_articulo !== 'CREDITO') {
+    if (r.id_articulo && r.id_articulo !== 'CREDITO') {
         await sb.from('inventario').update({ estado_actual: 'Disponible' }).eq('id_articulo', r.id_articulo);
         const iI = datosGlobales.inventario.findIndex(i => i.id_articulo === r.id_articulo);
         if (iI !== -1) datosGlobales.inventario[iI].estado_actual = 'Disponible';
@@ -351,10 +361,9 @@ async function cobrarDeudaJS() {
 async function finalizarRentaJS() {
     if (!rentaEditing) return;
     Swal.fire({ title:'Finalizando renta...', didOpen:()=>Swal.showLoading() });
-    await Promise.all([
-        sb.from('rentas').update({ estatus_renta:'Finalizada' }).eq('id_renta', rentaEditing.id_renta),
-        sb.from('inventario').update({ estado_actual:'Limpieza' }).eq('id_articulo', rentaEditing.id_articulo)
-    ]);
+    const ops = [sb.from('rentas').update({ estatus_renta:'Finalizada' }).eq('id_renta', rentaEditing.id_renta)];
+    if (rentaEditing.id_articulo) ops.push(sb.from('inventario').update({ estado_actual:'Limpieza' }).eq('id_articulo', rentaEditing.id_articulo));
+    await Promise.all(ops);
     const iR = datosGlobales.rentas.findIndex(r => r.id_renta === rentaEditing.id_renta);
     if (iR !== -1) datosGlobales.rentas[iR].estatus_renta = 'Finalizada';
     const iI = datosGlobales.inventario.findIndex(i => i.id_articulo === rentaEditing.id_articulo);
@@ -490,7 +499,7 @@ function abrirHistorialCliente(cliente) {
             const div = document.createElement('div');
             div.className = 'bg-gray-50 rounded-2xl p-3 border border-gray-100';
             div.innerHTML = `<div class="flex justify-between items-start">
-                <div><p class="font-bold text-sm text-gray-800">${nombreArticulo(r.id_articulo)}</p>
+                <div><p class="font-bold text-sm text-gray-800">${nombreArticulo(r)}</p>
                 <p class="text-[10px] text-gray-400 mt-0.5">Evento: ${r.fecha_evento||'—'}</p></div>
                 <span class="text-xs font-black ${saldo>0?'text-red-500':'text-green-600'}">$${saldo.toFixed(0)}</span></div>
                 <span class="text-[9px] font-bold px-2 py-0.5 rounded-full mt-2 inline-block ${estadoColor}">${r.estatus_renta}</span>`;
