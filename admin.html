@@ -411,6 +411,11 @@
                             <span class="material-icons-round text-base">check</span>
                             Finalizar y Enviar a Lavado
                         </button>
+                        <button id="btn-cancelar" onclick="cancelarRentaJS()"
+                            class="w-full p-3.5 rounded-2xl border border-red-200 bg-red-50 text-red-600 text-sm font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform hidden">
+                            <span class="material-icons-round text-base">cancel</span>
+                            Cancelar Renta
+                        </button>
                         <div class="grid grid-cols-2 gap-2">
                             <button onclick="guardarEstadoRenta('Disponible')"
                                 class="p-3 rounded-2xl border border-gray-200 bg-white text-gray-700 text-xs font-bold flex flex-col items-center gap-1 active:scale-95">
@@ -454,10 +459,16 @@
                             <span class="material-icons-round text-sm">chat</span> WhatsApp
                         </a>
                     </div>
-                    <span id="cliente-total-rentas"
-                        class="bg-pink-50 text-pink-600 px-3 py-1 rounded-full text-[10px] font-bold border border-pink-100">
-                        0 Rentas
-                    </span>
+                    <div class="flex flex-col items-end gap-1">
+                        <span id="cliente-total-rentas"
+                            class="bg-pink-50 text-pink-600 px-3 py-1 rounded-full text-[10px] font-bold border border-pink-100">
+                            0 Rentas
+                        </span>
+                        <span id="cliente-credito-badge"
+                            class="hidden bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-[10px] font-bold border border-indigo-100">
+                            $0 crédito
+                        </span>
+                    </div>
                 </div>
             </div>
 

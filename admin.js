@@ -7,6 +7,14 @@ let itemEditing  = null;
 let rentaEditing = null;
 let calendarInst = null;
 
+function nombreArticulo(idArticulo) {
+    if (!idArticulo) return '—';
+    if (idArticulo.startsWith('EXT:')) return idArticulo.slice(4) + ' ✦';
+    if (idArticulo === 'CREDITO') return 'Crédito a favor';
+    const item = datosGlobales.inventario.find(i => i.id_articulo === idArticulo);
+    return item?.nombre || idArticulo;
+}
+
 // ---- HELPER: URL de foto (AppSheet + Supabase + HTTP) ----
 function obtenerUrlFoto(foto, size) {
     const placeholder = size === 'sm'
@@ -168,7 +176,7 @@ function renderizarRentas(lista) {
         card.innerHTML = `<img src="${fotoUrl}" class="w-14 h-16 rounded-xl object-cover bg-gray-100 flex-shrink-0" onerror="this.src='https://placehold.co/60x72/f5f1eb/8a8a8e?text=Foto'">
             <div class="flex-1 min-w-0">
                 <p class="font-bold text-gray-900 text-sm truncate">${cliente?.nombre_completo||r.id_cliente||'—'}</p>
-                <p class="text-xs text-pink-600 font-medium truncate mt-0.5">${vestido?.nombre||r.id_articulo||'—'}</p>
+                <p class="text-xs text-pink-600 font-medium truncate mt-0.5">${nombreArticulo(r.id_articulo)}</p>
                 <div class="flex gap-2 mt-1.5 text-[10px] text-gray-400">
                     <span>📅 ${r.fecha_evento||'—'}</span>
                     <span>↩ ${r.fecha_retorno||'—'}</span>
@@ -190,7 +198,7 @@ function abrirModalRenta(r) {
     const fotoUrl = obtenerUrlFoto(vestido?.foto, 'lg');
     document.getElementById('renta-modal-foto').src           = fotoUrl;
     document.getElementById('renta-modal-cliente').textContent = cliente?.nombre_completo || r.id_cliente;
-    document.getElementById('renta-modal-vestido').textContent = vestido?.nombre || r.id_articulo;
+    document.getElementById('renta-modal-vestido').textContent = nombreArticulo(r.id_articulo);
     document.getElementById('renta-modal-id').textContent      = r.id_renta;
     document.getElementById('renta-modal-saldo').textContent   = '$' + (parseFloat(r.saldo_pendiente)||0).toFixed(2);
     document.getElementById('renta-modal-fecha-e').textContent = r.fecha_entrega || '—';
@@ -201,9 +209,11 @@ function abrirModalRenta(r) {
     if (tel) { btnWA.onclick = () => enviarRecordatorioWhatsApp(cliente, r, vestido); btnWA.classList.remove('hidden'); }
     else { btnWA.classList.add('hidden'); }
     const saldo = parseFloat(r.saldo_pendiente) || 0;
+    const esActiva = r.estatus_renta === 'Activa';
     document.getElementById('renta-badge-status').classList.toggle('hidden', r.estatus_renta !== 'Finalizada');
-    document.getElementById('btn-cobrar').classList.toggle('hidden', saldo <= 0 || r.estatus_renta === 'Finalizada');
-    document.getElementById('btn-finalizar').classList.toggle('hidden', saldo > 0 || r.estatus_renta === 'Finalizada');
+    document.getElementById('btn-cobrar').classList.toggle('hidden', saldo <= 0 || !esActiva);
+    document.getElementById('btn-finalizar').classList.toggle('hidden', saldo > 0 || !esActiva);
+    document.getElementById('btn-cancelar').classList.toggle('hidden', !esActiva);
     document.getElementById('modal-renta-detalle').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
 }
@@ -214,11 +224,78 @@ function cerrarModalRenta() {
 }
 async function guardarEstadoRenta(nuevoEstado) {
     if (!rentaEditing) return;
+    const idArticulo = rentaEditing.id_articulo;
+    const idx = datosGlobales.inventario.findIndex(i => i.id_articulo === idArticulo);
     cerrarModalRenta();
-    await sb.from('inventario').update({ estado_actual: nuevoEstado }).eq('id_articulo', rentaEditing.id_articulo);
-    const idx = datosGlobales.inventario.findIndex(i => i.id_articulo === rentaEditing.id_articulo);
+    await sb.from('inventario').update({ estado_actual: nuevoEstado }).eq('id_articulo', idArticulo);
     if (idx !== -1) datosGlobales.inventario[idx].estado_actual = nuevoEstado;
     Swal.fire({ icon:'success', title:'Vestido → ' + nuevoEstado, timer:1000, showConfirmButton:false });
+}
+
+async function cancelarRentaJS() {
+    if (!rentaEditing) return;
+    const r = { ...rentaEditing };
+    const abono = parseFloat(r.abono) || 0;
+
+    const opcs = {
+        title: '¿Cancelar esta renta?',
+        icon: 'warning',
+        showCancelButton: true,
+        cancelButtonText: 'No, conservar',
+        cancelButtonColor: '#9ca3af',
+        reverseButtons: true,
+    };
+    if (abono > 0) {
+        opcs.html = `El cliente dejó un abono de <b>$${abono.toFixed(0)}</b>.<br><br>¿Qué hacemos con ese dinero?`;
+        opcs.showDenyButton = true;
+        opcs.confirmButtonText = 'Sin devolución';
+        opcs.confirmButtonColor = '#ef4444';
+        opcs.denyButtonText = `Dar crédito a favor ($${abono.toFixed(0)})`;
+        opcs.denyButtonColor = '#6366f1';
+    } else {
+        opcs.text = 'La renta se marcará como cancelada.';
+        opcs.confirmButtonText = 'Sí, cancelar';
+        opcs.confirmButtonColor = '#ef4444';
+    }
+
+    const result = await Swal.fire(opcs);
+    if (!result.isConfirmed && !result.isDenied) return;
+
+    Swal.fire({ title: 'Procesando...', didOpen: () => Swal.showLoading() });
+
+    await sb.from('rentas').update({ estatus_renta: 'Cancelada', saldo_pendiente: 0 }).eq('id_renta', r.id_renta);
+
+    if (result.isDenied && abono > 0) {
+        const credEntry = {
+            id_renta: 'CRED-' + Date.now().toString(16).slice(-8).toUpperCase(),
+            id_cliente: r.id_cliente, id_articulo: 'CREDITO', estatus_renta: 'Credito',
+            abono, saldo_pendiente: 0, total_renta: abono, descuento: 0,
+            fecha_evento: new Date().toISOString().split('T')[0],
+            fecha_entrega: new Date().toISOString().split('T')[0],
+            fecha_retorno: new Date().toISOString().split('T')[0],
+            documento_garantia: '', ajustes: `Crédito por cancelación de renta ${r.id_renta}`
+        };
+        const { data: credData } = await sb.from('rentas').insert(credEntry).select().single();
+        if (credData) datosGlobales.rentas.push(credData);
+    }
+
+    if (r.id_articulo && !r.id_articulo.startsWith('EXT:') && r.id_articulo !== 'CREDITO') {
+        await sb.from('inventario').update({ estado_actual: 'Disponible' }).eq('id_articulo', r.id_articulo);
+        const iI = datosGlobales.inventario.findIndex(i => i.id_articulo === r.id_articulo);
+        if (iI !== -1) datosGlobales.inventario[iI].estado_actual = 'Disponible';
+    }
+
+    const iR = datosGlobales.rentas.findIndex(rr => rr.id_renta === r.id_renta);
+    if (iR !== -1) { datosGlobales.rentas[iR].estatus_renta = 'Cancelada'; datosGlobales.rentas[iR].saldo_pendiente = 0; }
+
+    cerrarModalRenta();
+    renderizarRentas(datosGlobales.rentas);
+    renderizarInventario(datosGlobales.inventario);
+
+    const msg = result.isDenied && abono > 0
+        ? `Se generó un crédito de $${abono.toFixed(0)} a favor del cliente.`
+        : 'La renta fue cancelada sin devolución.';
+    Swal.fire({ icon: 'success', title: 'Renta cancelada', text: msg, timer: 2500, showConfirmButton: false });
 }
 async function cobrarDeudaJS() {
     if (!rentaEditing) return;
@@ -283,7 +360,14 @@ function abrirHistorialCliente(cliente) {
     document.getElementById('cliente-modal-avatar').textContent = inicial;
     document.getElementById('cliente-modal-nombre').textContent = cliente.nombre_completo;
     document.getElementById('cliente-modal-id').textContent     = cliente.id_cliente;
-    document.getElementById('cliente-total-rentas').textContent = rentas.length + ' Rentas';
+    const rentasReales = rentas.filter(r => r.estatus_renta !== 'Credito' && r.estatus_renta !== 'Credito Usado');
+    document.getElementById('cliente-total-rentas').textContent = rentasReales.length + ' Rentas';
+    const credito = datosGlobales.rentas
+        .filter(r => r.id_cliente === cliente.id_cliente && r.estatus_renta === 'Credito')
+        .reduce((s, r) => s + (parseFloat(r.abono) || 0), 0);
+    const creditoBadge = document.getElementById('cliente-credito-badge');
+    if (credito > 0) { creditoBadge.textContent = '$' + credito.toFixed(0) + ' crédito'; creditoBadge.classList.remove('hidden'); }
+    else { creditoBadge.classList.add('hidden'); }
     const tel  = (cliente.telefono||'').replace(/\D/g,'');
     const waEl = document.getElementById('cliente-modal-whatsapp');
     if (tel) { waEl.href = 'https://wa.me/'+(tel.length===10?'52'+tel:tel); waEl.classList.remove('hidden'); }
@@ -294,15 +378,18 @@ function abrirHistorialCliente(cliente) {
         lista.innerHTML = '<p class="text-gray-400 text-sm italic text-center py-6">Sin rentas registradas.</p>';
     } else {
         rentas.forEach(r => {
-            const vestido = datosGlobales.inventario.find(i => i.id_articulo === r.id_articulo);
-            const saldo   = parseFloat(r.saldo_pendiente) || 0;
+            const saldo = parseFloat(r.saldo_pendiente) || 0;
+            const estadoColor = r.estatus_renta === 'Finalizada' ? 'bg-green-100 text-green-700'
+                : r.estatus_renta === 'Cancelada' ? 'bg-red-100 text-red-600'
+                : r.estatus_renta === 'Credito'   ? 'bg-indigo-100 text-indigo-700'
+                : 'bg-blue-100 text-blue-700';
             const div = document.createElement('div');
             div.className = 'bg-gray-50 rounded-2xl p-3 border border-gray-100';
             div.innerHTML = `<div class="flex justify-between items-start">
-                <div><p class="font-bold text-sm text-gray-800">${vestido?.nombre||r.id_articulo}</p>
+                <div><p class="font-bold text-sm text-gray-800">${nombreArticulo(r.id_articulo)}</p>
                 <p class="text-[10px] text-gray-400 mt-0.5">Evento: ${r.fecha_evento||'—'}</p></div>
                 <span class="text-xs font-black ${saldo>0?'text-red-500':'text-green-600'}">$${saldo.toFixed(0)}</span></div>
-                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full mt-2 inline-block ${r.estatus_renta==='Finalizada'?'bg-green-100 text-green-700':'bg-blue-100 text-blue-700'}">${r.estatus_renta}</span>`;
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full mt-2 inline-block ${estadoColor}">${r.estatus_renta}</span>`;
             lista.appendChild(div);
         });
     }
@@ -453,6 +540,9 @@ function cargarHistorialVestido() {
     rentas.forEach(r => {
         const cliente = datosGlobales.clientes.find(c => c.id_cliente === r.id_cliente);
         const saldo   = parseFloat(r.saldo_pendiente) || 0;
+        const estadoColor = r.estatus_renta === 'Finalizada' ? 'bg-green-100 text-green-700'
+            : r.estatus_renta === 'Cancelada' ? 'bg-red-100 text-red-600'
+            : 'bg-blue-100 text-blue-700';
         const div = document.createElement('div');
         div.className = 'bg-gray-50 rounded-2xl p-3 border border-gray-100';
         div.innerHTML = `
@@ -463,7 +553,7 @@ function cargarHistorialVestido() {
                 </div>
                 <span class="text-xs font-black ${saldo > 0 ? 'text-red-500' : 'text-green-600'}">$${saldo.toFixed(0)}</span>
             </div>
-            <span class="text-[9px] font-bold px-2 py-0.5 rounded-full mt-2 inline-block ${r.estatus_renta === 'Finalizada' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">
+            <span class="text-[9px] font-bold px-2 py-0.5 rounded-full mt-2 inline-block ${estadoColor}">
                 ${r.estatus_renta}
             </span>`;
         lista.appendChild(div);
