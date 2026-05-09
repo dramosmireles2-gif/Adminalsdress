@@ -260,7 +260,9 @@ document.getElementById('form-renta')?.addEventListener('submit', async (e) => {
     if (esExterno) {
         const nombreExt = document.getElementById('nombre-externo').value.trim();
         if (!nombreExt) return Swal.fire('Falta nombre', 'Escribe el nombre del vestido.', 'warning');
-        idArticulo = 'EXT:' + nombreExt;
+        idArticulo = null; // null evita el error de llave foránea con Supabase
+        const ajustesEl = document.getElementById('ajustes');
+        ajustesEl.value = nombreExt + (ajustesEl.value.trim() ? '\n' + ajustesEl.value.trim() : '');
     }
 
     if (!idCliente)   return Swal.fire('Falta Cliente', 'Por favor selecciona un cliente.', 'warning');
@@ -306,7 +308,7 @@ document.getElementById('form-renta')?.addEventListener('submit', async (e) => {
             if (remanente > 0.01) {
                 await sb.from('rentas').insert({
                     id_renta: 'CRED-' + Date.now().toString(16).slice(-8).toUpperCase(),
-                    id_cliente: idCliente, id_articulo: 'CREDITO', estatus_renta: 'Credito',
+                    id_cliente: idCliente, id_articulo: null, estatus_renta: 'Credito',
                     abono: remanente, saldo_pendiente: 0, total_renta: remanente, descuento: 0,
                     fecha_evento: fechaEvento, fecha_entrega: fechaEvento, fecha_retorno: fechaEvento,
                     documento_garantia: '', ajustes: 'Crédito remanente'
