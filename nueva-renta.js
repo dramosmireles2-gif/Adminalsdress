@@ -265,8 +265,8 @@ document.getElementById('form-renta')?.addEventListener('submit', async (e) => {
         ajustesEl.value = nombreExt + (ajustesEl.value.trim() ? '\n' + ajustesEl.value.trim() : '');
     }
 
-    if (!idCliente)   return Swal.fire('Falta Cliente', 'Por favor selecciona un cliente.', 'warning');
-    if (!idArticulo)  return Swal.fire('Falta Vestido', 'Por favor selecciona un artículo.', 'warning');
+    if (!idCliente)              return Swal.fire('Falta Cliente', 'Por favor selecciona un cliente.', 'warning');
+    if (!idArticulo && !esExterno) return Swal.fire('Falta Vestido', 'Por favor selecciona un artículo.', 'warning');
     if (!fechaEvento) return Swal.fire('Falta Fecha',   'Indica la fecha del evento.', 'warning');
 
     Swal.fire({ title: 'Guardando Renta...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
