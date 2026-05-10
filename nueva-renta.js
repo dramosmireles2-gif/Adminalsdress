@@ -271,8 +271,6 @@ document.getElementById('form-renta')?.addEventListener('submit', async (e) => {
 
     Swal.fire({ title: 'Guardando Renta...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-    const garantia = document.querySelector('input[name="garantia"]:checked')?.value || '';
-
     try {
         // 1. Guardar renta
         const { error: rentaError } = await sb.from('rentas').insert({
@@ -287,7 +285,7 @@ document.getElementById('form-renta')?.addEventListener('submit', async (e) => {
             abono:              parseFloat(document.getElementById('abono').value) || 0,
             saldo_pendiente:    parseFloat(document.getElementById('saldo').value) || 0,
             estatus_renta:      'Activa',
-            documento_garantia: garantia,
+            documento_garantia: '',
             ajustes:            document.getElementById('ajustes').value
         });
         if (rentaError) throw rentaError;
@@ -316,13 +314,47 @@ document.getElementById('form-renta')?.addEventListener('submit', async (e) => {
             }
         }
 
-        Swal.fire({
+        // Ticket de separado por WhatsApp
+        Swal.close();
+        const nombreCliente   = document.getElementById('nombre_cliente').value;
+        const nombreVestido   = esExterno
+            ? (document.getElementById('nombre-externo')?.value || 'Vestido externo')
+            : (document.getElementById('nombre_articulo').value || 'Artículo');
+        const fechaEventoVal  = document.getElementById('fecha_evento').value;
+        const fechaEntregaVal = document.getElementById('fecha_entrega').value;
+        const abonoVal        = parseFloat(document.getElementById('abono').value) || 0;
+        const saldoVal        = parseFloat(document.getElementById('saldo').value) || 0;
+
+        const clienteObj = clientesData.find(c => c.id_cliente === idCliente);
+        const telRaw     = (clienteObj?.telefono || '').replace(/\D/g, '');
+        const numWA      = telRaw.length === 10 ? '52' + telRaw : telRaw;
+
+        const { isConfirmed: enviarWA } = await Swal.fire({
             icon: 'success',
-            title: '¡Renta Guardada!',
-            text: esExterno ? 'Renta registrada.' : 'El inventario ha sido actualizado.',
-            confirmButtonText: 'Volver al Admin',
-            confirmButtonColor: '#d63384'
-        }).then(() => { window.location.href = 'admin.html'; });
+            title: '¡Renta guardada!',
+            text: numWA ? '¿Enviar ticket de separado por WhatsApp?' : 'Renta guardada correctamente.',
+            showConfirmButton: !!numWA,
+            confirmButtonText: 'Enviar WhatsApp',
+            confirmButtonColor: '#25d366',
+            showDenyButton: true,
+            denyButtonText: numWA ? 'No, ir al admin' : 'Ir al admin',
+        });
+
+        if (enviarWA && numWA) {
+            const msgSep = [
+                `Hola ${nombreCliente}! 🌸`,
+                `Tu vestido está separado ✨`,
+                `Vestido: ${nombreVestido}`,
+                `Evento: ${fechaEventoVal}`,
+                `Abono: $${abonoVal.toFixed(0)}`,
+                `Saldo pendiente: $${saldoVal.toFixed(0)}`,
+                `Fecha de recogida: ${fechaEntregaVal}`,
+                `¡Te esperamos! 💕`,
+            ].join('\n');
+            window.open('https://wa.me/' + numWA + '?text=' + encodeURIComponent(msgSep), '_blank');
+        }
+
+        window.location.href = 'admin.html';
 
     } catch (err) {
         console.error(err);

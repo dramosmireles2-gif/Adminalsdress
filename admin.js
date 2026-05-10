@@ -349,14 +349,73 @@ async function cancelarRentaJS() {
 }
 async function cobrarDeudaJS() {
     if (!rentaEditing) return;
-    Swal.fire({ title:'Registrando pago...', didOpen:()=>Swal.showLoading() });
-    const { error } = await sb.from('rentas').update({ saldo_pendiente:0, abono: rentaEditing.total_renta }).eq('id_renta', rentaEditing.id_renta);
-    if (error) { Swal.fire('Error','No se pudo registrar.','error'); return; }
+
+    const { value: docGarantia, isConfirmed } = await Swal.fire({
+        title: 'Documento de garantía',
+        text: '¿Qué documento deja el cliente?',
+        input: 'select',
+        inputOptions: { INE: 'INE', VISA: 'VISA', PASAPORTE: 'Pasaporte', LICENCIA: 'Licencia', Ninguno: 'Ninguno' },
+        inputPlaceholder: 'Selecciona...',
+        showCancelButton: true,
+        cancelButtonText: 'Cancelar',
+        confirmButtonText: 'Registrar pago',
+        confirmButtonColor: '#d63384',
+    });
+    if (!isConfirmed) return;
+
+    Swal.fire({ title: 'Registrando pago...', didOpen: () => Swal.showLoading() });
+
+    const { error } = await sb.from('rentas').update({
+        saldo_pendiente:    0,
+        abono:              rentaEditing.total_renta,
+        documento_garantia: docGarantia || '',
+    }).eq('id_renta', rentaEditing.id_renta);
+
+    if (error) { Swal.fire('Error', 'No se pudo registrar.', 'error'); return; }
+
     const idx = datosGlobales.rentas.findIndex(r => r.id_renta === rentaEditing.id_renta);
-    if (idx !== -1) datosGlobales.rentas[idx].saldo_pendiente = 0;
+    if (idx !== -1) {
+        datosGlobales.rentas[idx].saldo_pendiente    = 0;
+        datosGlobales.rentas[idx].abono              = rentaEditing.total_renta;
+        datosGlobales.rentas[idx].documento_garantia = docGarantia || '';
+    }
+
+    // Capturar antes de cerrar modal (cerrarModalRenta nulifica rentaEditing)
+    const snapRenta = { ...rentaEditing, saldo_pendiente: 0, documento_garantia: docGarantia || '' };
+    const cliente   = datosGlobales.clientes.find(c => c.id_cliente === snapRenta.id_cliente);
+
     cerrarModalRenta();
     renderizarRentas(datosGlobales.rentas);
-    Swal.fire({ icon:'success', title:'¡Pago registrado!', timer:1200, showConfirmButton:false });
+
+    const telRaw = (cliente?.telefono || '').replace(/\D/g, '');
+    const numWA  = telRaw.length === 10 ? '52' + telRaw : telRaw;
+
+    const { isConfirmed: enviarWA } = await Swal.fire({
+        icon: 'success',
+        title: '¡Pago registrado!',
+        text: numWA ? '¿Enviar recibo por WhatsApp?' : 'Pago registrado correctamente.',
+        showConfirmButton: !!numWA,
+        confirmButtonText: 'Enviar recibo',
+        confirmButtonColor: '#25d366',
+        showDenyButton: true,
+        denyButtonText: numWA ? 'Cerrar' : 'OK',
+    });
+
+    if (enviarWA && numWA) {
+        const total = parseFloat(snapRenta.total_renta) || 0;
+        const msg   = [
+            `Hola ${cliente?.nombre_completo || ''}! 🌸`,
+            `Recibo de tu renta ✨`,
+            `Vestido: ${nombreArticulo(snapRenta)}`,
+            `Evento: ${snapRenta.fecha_evento || '—'}`,
+            `Entrega: ${snapRenta.fecha_entrega || '—'}`,
+            `Devolución: ${snapRenta.fecha_retorno || '—'}`,
+            `Documento: ${docGarantia || 'Ninguno'}`,
+            `Total pagado: $${total.toFixed(0)}`,
+            `¡Gracias por tu preferencia! 💕`,
+        ].join('\n');
+        window.open('https://wa.me/' + numWA + '?text=' + encodeURIComponent(msg), '_blank');
+    }
 }
 async function finalizarRentaJS() {
     if (!rentaEditing) return;
@@ -411,29 +470,20 @@ function enviarReciboWhatsApp() {
     const cliente = datosGlobales.clientes.find(c => c.id_cliente === r.id_cliente);
     const tel     = (cliente?.telefono || '').replace(/\D/g, '');
     if (!tel) { Swal.fire('Sin teléfono', 'El cliente no tiene teléfono registrado.', 'warning'); return; }
-    const num     = tel.length === 10 ? '52' + tel : tel;
-    const total   = parseFloat(r.total_renta) || 0;
-    const abono   = parseFloat(r.abono) || 0;
-    const saldo   = parseFloat(r.saldo_pendiente) || 0;
-    const lineas  = [
-        `🧾 *RECIBO DE RENTA — ALS DRESS*`,
-        ``,
-        `👤 ${cliente?.nombre_completo || r.id_cliente}`,
-        `👗 ${nombreArticulo(r.id_articulo)}`,
-        `🔢 Folio: ${r.id_renta}`,
-        ``,
-        `📅 Evento: ${r.fecha_evento || '—'}`,
-        `📤 Entrega: ${r.fecha_entrega || '—'}`,
-        `📥 Devolución: ${r.fecha_retorno || '—'}`,
-        ``,
-        `💰 Total: $${total.toFixed(0)}`,
-        `✅ Abonado: $${abono.toFixed(0)}`,
-        `${saldo > 0 ? '⚠️' : '✅'} Saldo: $${saldo.toFixed(0)}`,
-    ];
-    if (r.ajustes) lineas.push(``, `✂️ Ajustes: ${r.ajustes}`);
-    if (r.documento_garantia) lineas.push(`📌 Garantía: ${r.documento_garantia}`);
-    lineas.push(``, `¡Gracias por confiar en Als Dress! 💕`);
-    window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(lineas.join('\n')), '_blank');
+    const num   = tel.length === 10 ? '52' + tel : tel;
+    const total = parseFloat(r.total_renta) || 0;
+    const msg   = [
+        `Hola ${cliente?.nombre_completo || ''}! 🌸`,
+        `Recibo de tu renta ✨`,
+        `Vestido: ${nombreArticulo(r)}`,
+        `Evento: ${r.fecha_evento || '—'}`,
+        `Entrega: ${r.fecha_entrega || '—'}`,
+        `Devolución: ${r.fecha_retorno || '—'}`,
+        `Documento: ${r.documento_garantia || 'Ninguno'}`,
+        `Total pagado: $${total.toFixed(0)}`,
+        `¡Gracias por tu preferencia! 💕`,
+    ].join('\n');
+    window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
 }
 
 function enviarRecordatorioWhatsApp(cliente, renta, vestido) {
