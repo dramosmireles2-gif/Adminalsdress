@@ -204,23 +204,27 @@ async function cambiarVisibilidadWeb(publicado) {
 function renderizarRentas(lista) {
     const contenedor = document.getElementById('lista-rentas');
     if (!contenedor) return;
-    const activas = lista.filter(r => r.estatus_renta === 'Activa');
-    if (!activas.length) {
+    const visibles = lista.filter(r => r.estatus_renta === 'Activa' || r.estatus_renta === 'Entregada');
+    if (!visibles.length) {
         contenedor.innerHTML = '<p class="text-center text-gray-400 py-10 text-sm italic">No hay rentas activas.</p>';
         return;
     }
     contenedor.innerHTML = '';
-    activas.forEach(r => {
-        const cliente = datosGlobales.clientes.find(c => c.id_cliente === r.id_cliente);
-        const vestido = datosGlobales.inventario.find(i => i.id_articulo === r.id_articulo);
-        const saldo   = parseFloat(r.saldo_pendiente) || 0;
-        const fotoUrl = obtenerUrlFoto(vestido?.foto, 'sm');
+    visibles.forEach(r => {
+        const cliente    = datosGlobales.clientes.find(c => c.id_cliente === r.id_cliente);
+        const vestido    = datosGlobales.inventario.find(i => i.id_articulo === r.id_articulo);
+        const saldo      = parseFloat(r.saldo_pendiente) || 0;
+        const fotoUrl    = obtenerUrlFoto(vestido?.foto, 'sm');
+        const entregada  = r.estatus_renta === 'Entregada';
         const card = document.createElement('div');
-        card.className = 'item-card bg-white rounded-2xl border border-gray-100 p-3 flex items-center gap-3 cursor-pointer active:scale-95 transition-all';
+        card.className = `item-card rounded-2xl border p-3 flex items-center gap-3 cursor-pointer active:scale-95 transition-all ${entregada ? 'bg-blue-50 border-blue-100' : 'bg-white border-gray-100'}`;
         card.innerHTML = `<img src="${fotoUrl}" class="w-14 h-16 rounded-xl object-cover bg-gray-100 flex-shrink-0" onerror="this.src='https://placehold.co/60x72/f5f1eb/8a8a8e?text=Foto'">
             <div class="flex-1 min-w-0">
-                <p class="font-bold text-gray-900 text-sm truncate">${cliente?.nombre_completo||r.id_cliente||'—'}</p>
-                <p class="text-xs text-pink-600 font-medium truncate mt-0.5">${nombreArticulo(r)}</p>
+                <div class="flex items-center gap-1.5">
+                    <p class="font-bold text-gray-900 text-sm truncate">${cliente?.nombre_completo||r.id_cliente||'—'}</p>
+                    ${entregada ? '<span class="text-[9px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">Entregado</span>' : ''}
+                </div>
+                <p class="text-xs ${entregada?'text-blue-600':'text-pink-600'} font-medium truncate mt-0.5">${nombreArticulo(r)}</p>
                 <div class="flex gap-2 mt-1.5 text-[10px] text-gray-400">
                     <span>📅 ${r.fecha_evento||'—'}</span>
                     <span>↩ ${r.fecha_retorno||'—'}</span>
@@ -253,17 +257,21 @@ function abrirModalRenta(r) {
     document.getElementById('renta-modal-ajustes').classList.remove('hidden');
     document.getElementById('btn-editar-ajustes').textContent = 'Editar';
 
-    const tel = cliente?.telefono;
+    const tel        = cliente?.telefono;
+    const esActiva   = r.estatus_renta === 'Activa';
+    const esEntregada= r.estatus_renta === 'Entregada';
+
     const btnWA = document.getElementById('btn-whatsapp-renta');
     if (tel) { btnWA.onclick = () => enviarRecordatorioWhatsApp(cliente, r, vestido); btnWA.classList.remove('hidden'); }
     else { btnWA.classList.add('hidden'); }
-    document.getElementById('btn-recibo-renta').classList.toggle('hidden', !tel);
-    const saldo = parseFloat(r.saldo_pendiente) || 0;
-    const esActiva = r.estatus_renta === 'Activa';
+    document.getElementById('btn-recibo-renta').classList.toggle('hidden', !tel || !esEntregada);
+
     document.getElementById('renta-badge-status').classList.toggle('hidden', r.estatus_renta !== 'Finalizada');
-    document.getElementById('btn-cobrar').classList.toggle('hidden', saldo <= 0 || !esActiva);
-    document.getElementById('btn-finalizar').classList.toggle('hidden', saldo > 0 || !esActiva);
-    document.getElementById('btn-cancelar').classList.toggle('hidden', !esActiva);
+    document.getElementById('renta-badge-entregada').classList.toggle('hidden', !esEntregada);
+
+    document.getElementById('btn-entregar').classList.toggle('hidden', !esActiva);
+    document.getElementById('btn-devolucion').classList.toggle('hidden', !esEntregada);
+    document.getElementById('btn-cancelar').classList.toggle('hidden', !esActiva && !esEntregada);
     document.getElementById('modal-renta-detalle').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
 }
@@ -347,41 +355,46 @@ async function cancelarRentaJS() {
         : 'La renta fue cancelada sin devolución.';
     Swal.fire({ icon: 'success', title: 'Renta cancelada', text: msg, timer: 2500, showConfirmButton: false });
 }
-async function cobrarDeudaJS() {
+async function entregarVestidoJS() {
     if (!rentaEditing) return;
+    const saldo = parseFloat(rentaEditing.saldo_pendiente) || 0;
 
+    // Paso 1: documento de garantía (y avisar si hay saldo pendiente)
     const { value: docGarantia, isConfirmed } = await Swal.fire({
-        title: 'Documento de garantía',
-        text: '¿Qué documento deja el cliente?',
+        title: 'Entregar vestido',
+        html: saldo > 0
+            ? `Se cobrará el saldo pendiente de <b>$${saldo.toFixed(0)}</b>.<br><br>¿Qué documento deja el cliente?`
+            : '¿Qué documento deja el cliente?',
         input: 'select',
         inputOptions: { INE: 'INE', VISA: 'VISA', PASAPORTE: 'Pasaporte', LICENCIA: 'Licencia', Ninguno: 'Ninguno' },
         inputPlaceholder: 'Selecciona...',
         showCancelButton: true,
         cancelButtonText: 'Cancelar',
-        confirmButtonText: 'Registrar pago',
+        confirmButtonText: 'Entregar vestido',
         confirmButtonColor: '#d63384',
     });
     if (!isConfirmed) return;
 
-    Swal.fire({ title: 'Registrando pago...', didOpen: () => Swal.showLoading() });
+    Swal.fire({ title: 'Registrando entrega...', didOpen: () => Swal.showLoading() });
 
     const { error } = await sb.from('rentas').update({
         saldo_pendiente:    0,
         abono:              rentaEditing.total_renta,
         documento_garantia: docGarantia || '',
+        estatus_renta:      'Entregada',
     }).eq('id_renta', rentaEditing.id_renta);
 
-    if (error) { Swal.fire('Error', 'No se pudo registrar.', 'error'); return; }
+    if (error) { Swal.fire('Error', 'No se pudo registrar la entrega.', 'error'); return; }
 
     const idx = datosGlobales.rentas.findIndex(r => r.id_renta === rentaEditing.id_renta);
     if (idx !== -1) {
         datosGlobales.rentas[idx].saldo_pendiente    = 0;
         datosGlobales.rentas[idx].abono              = rentaEditing.total_renta;
         datosGlobales.rentas[idx].documento_garantia = docGarantia || '';
+        datosGlobales.rentas[idx].estatus_renta      = 'Entregada';
     }
 
-    // Capturar antes de cerrar modal (cerrarModalRenta nulifica rentaEditing)
-    const snapRenta = { ...rentaEditing, saldo_pendiente: 0, documento_garantia: docGarantia || '' };
+    const snapRenta = { ...rentaEditing, saldo_pendiente: 0, documento_garantia: docGarantia || '', estatus_renta: 'Entregada' };
     const cliente   = datosGlobales.clientes.find(c => c.id_cliente === snapRenta.id_cliente);
 
     cerrarModalRenta();
@@ -392,44 +405,56 @@ async function cobrarDeudaJS() {
 
     const { isConfirmed: enviarWA } = await Swal.fire({
         icon: 'success',
-        title: '¡Pago registrado!',
-        text: numWA ? '¿Enviar recibo por WhatsApp?' : 'Pago registrado correctamente.',
+        title: '¡Vestido entregado!',
+        text: numWA ? '¿Enviar mensaje de entrega por WhatsApp?' : 'Entrega registrada correctamente.',
         showConfirmButton: !!numWA,
-        confirmButtonText: 'Enviar recibo',
+        confirmButtonText: 'Enviar WhatsApp',
         confirmButtonColor: '#25d366',
         showDenyButton: true,
-        denyButtonText: numWA ? 'Cerrar' : 'OK',
+        denyButtonText: numWA ? 'No enviar' : 'OK',
     });
 
     if (enviarWA && numWA) {
-        const total = parseFloat(snapRenta.total_renta) || 0;
-        const msg   = [
+        const msg = [
             `Hola ${cliente?.nombre_completo || ''}! 🌸`,
-            `Recibo de tu renta ✨`,
-            `Vestido: ${nombreArticulo(snapRenta)}`,
-            `Evento: ${snapRenta.fecha_evento || '—'}`,
-            `Entrega: ${snapRenta.fecha_entrega || '—'}`,
-            `Devolución: ${snapRenta.fecha_retorno || '—'}`,
-            `Documento: ${docGarantia || 'Ninguno'}`,
-            `Total pagado: $${total.toFixed(0)}`,
-            `¡Gracias por tu preferencia! 💕`,
+            `¡Disfruta tu vestido! ✨`,
+            `Recuerda devolverlo el ${snapRenta.fecha_retorno || '—'}`,
+            `Cualquier duda, escríbenos 💕`,
         ].join('\n');
         window.open('https://wa.me/' + numWA + '?text=' + encodeURIComponent(msg), '_blank');
     }
 }
-async function finalizarRentaJS() {
+async function recibirDevolucionJS() {
     if (!rentaEditing) return;
-    Swal.fire({ title:'Finalizando renta...', didOpen:()=>Swal.showLoading() });
-    const ops = [sb.from('rentas').update({ estatus_renta:'Finalizada' }).eq('id_renta', rentaEditing.id_renta)];
-    if (rentaEditing.id_articulo) ops.push(sb.from('inventario').update({ estado_actual:'Limpieza' }).eq('id_articulo', rentaEditing.id_articulo));
+    const r = rentaEditing;
+
+    const { isConfirmed } = await Swal.fire({
+        title: 'Recibir devolución',
+        html: `¿El cliente devolvió el vestido<br>y se le regresó su documento de garantía?`,
+        icon: 'question',
+        showCancelButton: true,
+        cancelButtonText: 'No aún',
+        confirmButtonText: 'Sí, cerrar renta',
+        confirmButtonColor: '#2563eb',
+    });
+    if (!isConfirmed) return;
+
+    Swal.fire({ title: 'Cerrando renta...', didOpen: () => Swal.showLoading() });
+
+    const ops = [sb.from('rentas').update({ estatus_renta: 'Finalizada' }).eq('id_renta', r.id_renta)];
+    if (r.id_articulo) ops.push(sb.from('inventario').update({ estado_actual: 'Limpieza' }).eq('id_articulo', r.id_articulo));
     await Promise.all(ops);
-    const iR = datosGlobales.rentas.findIndex(r => r.id_renta === rentaEditing.id_renta);
+
+    const iR = datosGlobales.rentas.findIndex(x => x.id_renta === r.id_renta);
     if (iR !== -1) datosGlobales.rentas[iR].estatus_renta = 'Finalizada';
-    const iI = datosGlobales.inventario.findIndex(i => i.id_articulo === rentaEditing.id_articulo);
+    const iI = datosGlobales.inventario.findIndex(i => i.id_articulo === r.id_articulo);
     if (iI !== -1) datosGlobales.inventario[iI].estado_actual = 'Limpieza';
+
     cerrarModalRenta();
     renderizarRentas(datosGlobales.rentas);
-    Swal.fire({ icon:'success', title:'¡Renta finalizada!', text:'Vestido enviado a limpieza.', timer:1500, showConfirmButton:false });
+    renderizarInventario(datosGlobales.inventario);
+
+    Swal.fire({ icon: 'success', title: '¡Renta cerrada!', text: 'Vestido enviado a limpieza.', timer: 1500, showConfirmButton: false });
 }
 function toggleEditarAjustes() {
     const vista   = document.getElementById('renta-modal-ajustes');
