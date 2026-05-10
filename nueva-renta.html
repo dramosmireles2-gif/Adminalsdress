@@ -17,13 +17,7 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Radio garantía */
-        .garantia-label input:checked + div {
-            background-color: #1c1c1e;
-            color: white;
-            border-color: #1c1c1e;
-        }
-    </style>
+</style>
   <link rel="manifest" href="./manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -221,32 +215,6 @@
                         <input type="number" id="saldo" name="saldo" readonly
                             class="w-28 p-2.5 pl-6 bg-white border border-red-200 rounded-xl text-red-600 font-black text-sm text-right outline-none">
                     </div>
-                </div>
-            </div>
-
-            <!-- GARANTÍA -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                    <span class="material-icons-round text-sm text-pink-400">badge</span>
-                    Documento de Garantía
-                </p>
-                <div class="grid grid-cols-4 gap-2">
-                    <label class="garantia-label cursor-pointer text-center">
-                        <input type="radio" name="garantia" value="INE" class="peer hidden" checked>
-                        <div class="p-2.5 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 bg-gray-50 hover:border-gray-400 transition-all">INE</div>
-                    </label>
-                    <label class="garantia-label cursor-pointer text-center">
-                        <input type="radio" name="garantia" value="VISA" class="peer hidden">
-                        <div class="p-2.5 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 bg-gray-50 hover:border-gray-400 transition-all">VISA</div>
-                    </label>
-                    <label class="garantia-label cursor-pointer text-center">
-                        <input type="radio" name="garantia" value="PASAPORTE" class="peer hidden">
-                        <div class="p-2.5 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 bg-gray-50 hover:border-gray-400 transition-all">Pasaporte</div>
-                    </label>
-                    <label class="garantia-label cursor-pointer text-center">
-                        <input type="radio" name="garantia" value="LICENCIA" class="peer hidden">
-                        <div class="p-2.5 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 bg-gray-50 hover:border-gray-400 transition-all">Licencia</div>
-                    </label>
                 </div>
             </div>
 
