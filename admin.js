@@ -590,6 +590,7 @@ async function guardarClienteJS() {
 
 async function eliminarClienteJS() {
     if (!clienteEditing) return;
+
     const rentasActivas = datosGlobales.rentas.filter(r =>
         r.id_cliente === clienteEditing.id_cliente &&
         (r.estatus_renta === 'Activa' || r.estatus_renta === 'Entregada')
@@ -599,9 +600,10 @@ async function eliminarClienteJS() {
         return;
     }
 
+    const totalRentas = datosGlobales.rentas.filter(r => r.id_cliente === clienteEditing.id_cliente).length;
     const { isConfirmed } = await Swal.fire({
         title: '¿Eliminar cliente?',
-        html: `Se eliminará a <b>${clienteEditing.nombre_completo}</b> y todo su historial.<br><br>Esta acción no se puede deshacer.`,
+        html: `Se eliminará a <b>${clienteEditing.nombre_completo}</b>${totalRentas ? ` y su historial de <b>${totalRentas} renta(s)</b>` : ''}.<br><br>Esta acción no se puede deshacer.`,
         icon: 'warning',
         showCancelButton: true,
         cancelButtonText: 'Cancelar',
@@ -612,13 +614,22 @@ async function eliminarClienteJS() {
 
     Swal.fire({ title: 'Eliminando...', didOpen: () => Swal.showLoading() });
 
+    // Borrar rentas primero para respetar el FK constraint
+    if (totalRentas) {
+        const { error: rentasError } = await sb.from('rentas').delete().eq('id_cliente', clienteEditing.id_cliente);
+        if (rentasError) { Swal.fire('Error', 'No se pudo eliminar el historial: ' + rentasError.message, 'error'); return; }
+    }
+
     const { error } = await sb.from('clientes').delete().eq('id_cliente', clienteEditing.id_cliente);
     if (error) { Swal.fire('Error', 'No se pudo eliminar: ' + error.message, 'error'); return; }
 
+    // Limpiar datos locales
+    datosGlobales.rentas   = datosGlobales.rentas.filter(r => r.id_cliente !== clienteEditing.id_cliente);
     datosGlobales.clientes = datosGlobales.clientes.filter(c => c.id_cliente !== clienteEditing.id_cliente);
     clienteEditing = null;
     document.getElementById('modal-cliente-historial').classList.add('hidden');
     renderizarClientes();
+    renderizarRentas(datosGlobales.rentas);
     Swal.fire({ icon: 'success', title: '¡Cliente eliminado!', timer: 1200, showConfirmButton: false });
 }
 
