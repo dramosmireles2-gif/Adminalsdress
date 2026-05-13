@@ -3,9 +3,10 @@
 // =============================================
 
 const datosGlobales = { inventario: [], rentas: [], clientes: [] };
-let itemEditing  = null;
-let rentaEditing = null;
-let calendarInst = null;
+let itemEditing    = null;
+let rentaEditing   = null;
+let clienteEditing = null;
+let calendarInst   = null;
 
 function nombreArticulo(r) {
     // Acepta tanto un objeto renta como un string de id_articulo (compat)
@@ -542,7 +543,91 @@ function renderizarClientes() {
     });
 }
 
+function toggleEditarCliente() {
+    const seccion = document.getElementById('cliente-edit-section');
+    const btn     = document.getElementById('btn-editar-cliente');
+    const oculta  = seccion.classList.contains('hidden');
+    if (oculta) {
+        document.getElementById('cliente-edit-nombre').value = clienteEditing?.nombre_completo || '';
+        document.getElementById('cliente-edit-tel').value    = clienteEditing?.telefono || '';
+        seccion.classList.remove('hidden');
+        btn.textContent = 'Cancelar';
+        document.getElementById('cliente-edit-nombre').focus();
+    } else {
+        seccion.classList.add('hidden');
+        btn.textContent = 'Editar';
+    }
+}
+
+async function guardarClienteJS() {
+    if (!clienteEditing) return;
+    const nombre = document.getElementById('cliente-edit-nombre').value.trim();
+    const tel    = document.getElementById('cliente-edit-tel').value.trim();
+    if (!nombre) return Swal.fire('Falta nombre', 'El nombre no puede estar vacío.', 'warning');
+
+    Swal.fire({ title: 'Guardando...', didOpen: () => Swal.showLoading() });
+
+    const { error } = await sb.from('clientes').update({ nombre_completo: nombre, telefono: tel }).eq('id_cliente', clienteEditing.id_cliente);
+    if (error) { Swal.fire('Error', 'No se pudo guardar.', 'error'); return; }
+
+    const idx = datosGlobales.clientes.findIndex(c => c.id_cliente === clienteEditing.id_cliente);
+    if (idx !== -1) { datosGlobales.clientes[idx].nombre_completo = nombre; datosGlobales.clientes[idx].telefono = tel; }
+    clienteEditing.nombre_completo = nombre;
+    clienteEditing.telefono        = tel;
+
+    // Actualizar lo visible en el modal
+    document.getElementById('cliente-modal-nombre').textContent = nombre;
+    const telRaw = tel.replace(/\D/g, '');
+    const waEl   = document.getElementById('cliente-modal-whatsapp');
+    if (telRaw) { waEl.href = 'https://wa.me/' + (telRaw.length === 10 ? '52' + telRaw : telRaw); waEl.classList.remove('hidden'); }
+    else { waEl.classList.add('hidden'); }
+
+    document.getElementById('cliente-edit-section').classList.add('hidden');
+    document.getElementById('btn-editar-cliente').textContent = 'Editar';
+    renderizarClientes();
+    Swal.fire({ icon: 'success', title: '¡Cliente actualizado!', timer: 1000, showConfirmButton: false });
+}
+
+async function eliminarClienteJS() {
+    if (!clienteEditing) return;
+    const rentasActivas = datosGlobales.rentas.filter(r =>
+        r.id_cliente === clienteEditing.id_cliente &&
+        (r.estatus_renta === 'Activa' || r.estatus_renta === 'Entregada')
+    );
+    if (rentasActivas.length) {
+        Swal.fire('No se puede eliminar', `Este cliente tiene ${rentasActivas.length} renta(s) activa(s). Ciérralas primero.`, 'warning');
+        return;
+    }
+
+    const { isConfirmed } = await Swal.fire({
+        title: '¿Eliminar cliente?',
+        html: `Se eliminará a <b>${clienteEditing.nombre_completo}</b> y todo su historial.<br><br>Esta acción no se puede deshacer.`,
+        icon: 'warning',
+        showCancelButton: true,
+        cancelButtonText: 'Cancelar',
+        confirmButtonText: 'Sí, eliminar',
+        confirmButtonColor: '#ef4444',
+    });
+    if (!isConfirmed) return;
+
+    Swal.fire({ title: 'Eliminando...', didOpen: () => Swal.showLoading() });
+
+    const { error } = await sb.from('clientes').delete().eq('id_cliente', clienteEditing.id_cliente);
+    if (error) { Swal.fire('Error', 'No se pudo eliminar: ' + error.message, 'error'); return; }
+
+    datosGlobales.clientes = datosGlobales.clientes.filter(c => c.id_cliente !== clienteEditing.id_cliente);
+    clienteEditing = null;
+    document.getElementById('modal-cliente-historial').classList.add('hidden');
+    renderizarClientes();
+    Swal.fire({ icon: 'success', title: '¡Cliente eliminado!', timer: 1200, showConfirmButton: false });
+}
+
 function abrirHistorialCliente(cliente) {
+    clienteEditing = cliente;
+    // Resetear sección de edición al abrir
+    document.getElementById('cliente-edit-section').classList.add('hidden');
+    document.getElementById('btn-editar-cliente').textContent = 'Editar';
+
     const rentas  = datosGlobales.rentas.filter(r => r.id_cliente === cliente.id_cliente);
     const inicial = (cliente.nombre_completo||'?')[0].toUpperCase();
     document.getElementById('cliente-modal-avatar').textContent = inicial;
