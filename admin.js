@@ -7,6 +7,7 @@ let itemEditing    = null;
 let rentaEditing   = null;
 let clienteEditing = null;
 let calendarInst   = null;
+let filtroRentas   = 'activas';
 
 function nombreArticulo(r) {
     // Acepta tanto un objeto renta como un string de id_articulo (compat)
@@ -202,12 +203,22 @@ async function cambiarVisibilidadWeb(publicado) {
     renderizarInventario(datosGlobales.inventario);
 }
 
+function filtrarRentas(tipo) {
+    filtroRentas = tipo;
+    document.getElementById('chip-rentas-activas').className  = `px-4 py-1.5 rounded-full text-[10px] font-bold transition-all ${tipo === 'activas'   ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-500'}`;
+    document.getElementById('chip-rentas-historial').className = `px-4 py-1.5 rounded-full text-[10px] font-bold transition-all ${tipo === 'historial' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-500'}`;
+    renderizarRentas(datosGlobales.rentas);
+}
+
 function renderizarRentas(lista) {
     const contenedor = document.getElementById('lista-rentas');
     if (!contenedor) return;
-    const visibles = lista.filter(r => r.estatus_renta === 'Activa' || r.estatus_renta === 'Entregada');
+    const esHistorial = filtroRentas === 'historial';
+    const visibles = lista.filter(r => esHistorial
+        ? (r.estatus_renta === 'Finalizada' || r.estatus_renta === 'Cancelada')
+        : (r.estatus_renta === 'Activa'     || r.estatus_renta === 'Entregada'));
     if (!visibles.length) {
-        contenedor.innerHTML = '<p class="text-center text-gray-400 py-10 text-sm italic">No hay rentas activas.</p>';
+        contenedor.innerHTML = `<p class="text-center text-gray-400 py-10 text-sm italic">${esHistorial ? 'Sin rentas en el historial.' : 'No hay rentas en curso.'}</p>`;
         return;
     }
     contenedor.innerHTML = '';
@@ -217,15 +228,26 @@ function renderizarRentas(lista) {
         const saldo      = parseFloat(r.saldo_pendiente) || 0;
         const fotoUrl    = obtenerUrlFoto(vestido?.foto, 'sm');
         const entregada  = r.estatus_renta === 'Entregada';
+        const finalizada = r.estatus_renta === 'Finalizada';
+        const cancelada  = r.estatus_renta === 'Cancelada';
+        const bgClass    = entregada ? 'bg-blue-50 border-blue-100'
+                         : finalizada ? 'bg-gray-50 border-gray-100 opacity-80'
+                         : cancelada  ? 'bg-red-50 border-red-100 opacity-70'
+                         : 'bg-white border-gray-100';
+        const nombreColor = entregada ? 'text-blue-600' : finalizada || cancelada ? 'text-gray-400' : 'text-pink-600';
+        let badge = '';
+        if (entregada) badge = '<span class="text-[9px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">Entregado</span>';
+        else if (finalizada) badge = '<span class="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">Finalizada</span>';
+        else if (cancelada)  badge = '<span class="text-[9px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">Cancelada</span>';
         const card = document.createElement('div');
-        card.className = `item-card rounded-2xl border p-3 flex items-center gap-3 cursor-pointer active:scale-95 transition-all ${entregada ? 'bg-blue-50 border-blue-100' : 'bg-white border-gray-100'}`;
+        card.className = `item-card rounded-2xl border p-3 flex items-center gap-3 cursor-pointer active:scale-95 transition-all ${bgClass}`;
         card.innerHTML = `<img src="${fotoUrl}" class="w-14 h-16 rounded-xl object-cover bg-gray-100 flex-shrink-0" onerror="this.src='https://placehold.co/60x72/f5f1eb/8a8a8e?text=Foto'">
             <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-1.5 flex-wrap">
                     <p class="font-bold text-gray-900 text-sm truncate">${cliente?.nombre_completo||r.id_cliente||'—'}</p>
-                    ${entregada ? '<span class="text-[9px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">Entregado</span>' : ''}
+                    ${badge}
                 </div>
-                <p class="text-xs ${entregada?'text-blue-600':'text-pink-600'} font-medium truncate mt-0.5">${nombreArticulo(r)}</p>
+                <p class="text-xs ${nombreColor} font-medium truncate mt-0.5">${nombreArticulo(r)}</p>
                 <div class="flex gap-2 mt-1.5 text-[10px] text-gray-400">
                     <span>📅 ${r.fecha_evento||'—'}</span>
                     <span>↩ ${r.fecha_retorno||'—'}</span>
@@ -253,10 +275,12 @@ function abrirModalRenta(r) {
     document.getElementById('renta-modal-fecha-e').textContent = r.fecha_entrega || '—';
     document.getElementById('renta-modal-fecha-r').textContent = r.fecha_retorno || '—';
     document.getElementById('renta-modal-ajustes').textContent = r.ajustes || 'Sin ajustes registrados.';
-    // Resetear editor de ajustes
+    // Resetear editores
     document.getElementById('ajustes-edit-section').classList.add('hidden');
     document.getElementById('renta-modal-ajustes').classList.remove('hidden');
     document.getElementById('btn-editar-ajustes').textContent = 'Editar';
+    document.getElementById('renta-edit-section').classList.add('hidden');
+    document.getElementById('btn-editar-renta').textContent = 'Editar';
 
     const tel        = cliente?.telefono;
     const esActiva   = r.estatus_renta === 'Activa';
@@ -457,6 +481,76 @@ async function recibirDevolucionJS() {
 
     Swal.fire({ icon: 'success', title: '¡Renta cerrada!', text: 'Vestido enviado a limpieza.', timer: 1500, showConfirmButton: false });
 }
+function toggleEditarRenta() {
+    const seccion = document.getElementById('renta-edit-section');
+    const btn     = document.getElementById('btn-editar-renta');
+    const oculta  = seccion.classList.contains('hidden');
+    if (oculta) {
+        const r = rentaEditing;
+        document.getElementById('renta-edit-total').value         = r.total_renta    || 0;
+        document.getElementById('renta-edit-descuento').value     = r.descuento      || 0;
+        document.getElementById('renta-edit-abono').value         = r.abono          || 0;
+        document.getElementById('renta-edit-fecha-evento').value  = r.fecha_evento   || '';
+        document.getElementById('renta-edit-fecha-entrega').value = r.fecha_entrega  || '';
+        document.getElementById('renta-edit-fecha-retorno').value = r.fecha_retorno  || '';
+        recalcularSaldoEdit();
+        seccion.classList.remove('hidden');
+        btn.textContent = 'Cancelar';
+        seccion.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+        seccion.classList.add('hidden');
+        btn.textContent = 'Editar';
+    }
+}
+
+function recalcularSaldoEdit() {
+    const total = parseFloat(document.getElementById('renta-edit-total').value)     || 0;
+    const desc  = parseFloat(document.getElementById('renta-edit-descuento').value) || 0;
+    const abono = parseFloat(document.getElementById('renta-edit-abono').value)     || 0;
+    const saldo = total - desc - abono;
+    const el = document.getElementById('renta-edit-saldo-preview');
+    el.textContent = '$' + saldo.toFixed(0);
+    el.className = `font-black text-sm ${saldo > 0 ? 'text-red-500' : 'text-green-600'}`;
+}
+
+async function guardarRentaJS() {
+    if (!rentaEditing) return;
+    const total  = parseFloat(document.getElementById('renta-edit-total').value)     || 0;
+    const desc   = parseFloat(document.getElementById('renta-edit-descuento').value) || 0;
+    const abono  = parseFloat(document.getElementById('renta-edit-abono').value)     || 0;
+    const saldo  = total - desc - abono;
+    const fEvento   = document.getElementById('renta-edit-fecha-evento').value;
+    const fEntrega  = document.getElementById('renta-edit-fecha-entrega').value;
+    const fRetorno  = document.getElementById('renta-edit-fecha-retorno').value;
+
+    Swal.fire({ title: 'Guardando...', didOpen: () => Swal.showLoading() });
+
+    const { error } = await sb.from('rentas').update({
+        total_renta:     total,
+        descuento:       desc,
+        abono:           abono,
+        saldo_pendiente: saldo,
+        fecha_evento:    fEvento,
+        fecha_entrega:   fEntrega,
+        fecha_retorno:   fRetorno,
+    }).eq('id_renta', rentaEditing.id_renta);
+
+    if (error) { Swal.fire('Error', 'No se pudo guardar.', 'error'); return; }
+
+    // Actualizar estado local y modal
+    Object.assign(rentaEditing, { total_renta: total, descuento: desc, abono, saldo_pendiente: saldo, fecha_evento: fEvento, fecha_entrega: fEntrega, fecha_retorno: fRetorno });
+    const idx = datosGlobales.rentas.findIndex(r => r.id_renta === rentaEditing.id_renta);
+    if (idx !== -1) Object.assign(datosGlobales.rentas[idx], rentaEditing);
+
+    document.getElementById('renta-modal-saldo').textContent   = '$' + saldo.toFixed(2);
+    document.getElementById('renta-modal-fecha-e').textContent = fEntrega || '—';
+    document.getElementById('renta-modal-fecha-r').textContent = fRetorno || '—';
+    document.getElementById('renta-edit-section').classList.add('hidden');
+    document.getElementById('btn-editar-renta').textContent = 'Editar';
+    renderizarRentas(datosGlobales.rentas);
+    Swal.fire({ icon: 'success', title: '¡Renta actualizada!', timer: 1000, showConfirmButton: false });
+}
+
 function toggleEditarAjustes() {
     const vista   = document.getElementById('renta-modal-ajustes');
     const editor  = document.getElementById('ajustes-edit-section');

@@ -88,7 +88,7 @@
             <button onclick="cambiarTab('rentas')" id="btn-tab-rentas"
                 class="tab-btn flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-bold border-b-2 border-transparent text-gray-400 transition-all min-w-[60px]">
                 <span class="material-icons-round text-lg">shopping_bag</span>
-                Activas
+                Rentas
             </button>
             <button onclick="cambiarTab('calendario')" id="btn-tab-calendario"
                 class="tab-btn flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-bold border-b-2 border-transparent text-gray-400 transition-all min-w-[60px]">
@@ -168,11 +168,21 @@
             </div>
         </section>
 
-        <!-- RENTAS ACTIVAS -->
+        <!-- RENTAS -->
         <section id="sec-rentas" class="tab-content hidden space-y-4">
             <div class="flex items-center justify-between">
-                <h2 class="font-display text-xl font-bold text-gray-900">Rentas Activas</h2>
-                <span class="text-[10px] bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-bold border border-blue-100">En curso</span>
+                <h2 class="font-display text-xl font-bold text-gray-900">Rentas</h2>
+            </div>
+            <!-- Filtros -->
+<div class="flex gap-2">
+                <button onclick="filtrarRentas('activas')" id="chip-rentas-activas"
+                    class="px-4 py-1.5 rounded-full bg-gray-800 text-white text-[10px] font-bold transition-all">
+                    En curso
+                </button>
+                <button onclick="filtrarRentas('historial')" id="chip-rentas-historial"
+                    class="px-4 py-1.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-bold transition-all">
+                    Historial
+                </button>
             </div>
             <div id="lista-rentas" class="space-y-3">
                 <p class="text-center text-gray-400 mt-10 text-sm italic">Cargando...</p>
@@ -389,12 +399,72 @@
                     <div class="flex-1">
                         <h2 class="font-display text-lg font-bold text-gray-900 leading-tight" id="renta-modal-cliente">Cliente</h2>
                         <p class="text-sm text-pink-600 font-bold mt-1" id="renta-modal-vestido">Vestido</p>
-                        <div class="flex items-center gap-2 mt-2">
+                        <div class="flex items-center gap-2 mt-2 flex-wrap">
                             <span id="renta-modal-id" class="text-[9px] bg-gray-100 px-2 py-0.5 rounded-lg text-gray-400 font-mono">ID</span>
                             <span id="renta-badge-status" class="text-[9px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold hidden">FINALIZADA</span>
                             <span id="renta-badge-entregada" class="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold hidden">ENTREGADO</span>
+                            <button id="btn-editar-renta" onclick="toggleEditarRenta()"
+                                class="text-[9px] font-bold text-pink-500 px-2 py-0.5 rounded-lg hover:bg-pink-50 transition-colors">
+                                Editar
+                            </button>
                         </div>
                     </div>
+                </div>
+
+                <!-- Sección edición inline -->
+                <div id="renta-edit-section" class="hidden bg-gray-50 rounded-2xl border border-gray-200 p-4 mb-4 space-y-3">
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Editar renta</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-500 ml-1">Total</label>
+                            <div class="relative mt-1">
+                                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">$</span>
+                                <input type="number" id="renta-edit-total" oninput="recalcularSaldoEdit()"
+                                    class="w-full p-2 pl-5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-500 ml-1">Descuento</label>
+                            <div class="relative mt-1">
+                                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">$</span>
+                                <input type="number" id="renta-edit-descuento" oninput="recalcularSaldoEdit()"
+                                    class="w-full p-2 pl-5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-500 ml-1">Abono</label>
+                            <div class="relative mt-1">
+                                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">$</span>
+                                <input type="number" id="renta-edit-abono" oninput="recalcularSaldoEdit()"
+                                    class="w-full p-2 pl-5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-red-50 border border-red-100 rounded-xl px-3 py-2 flex justify-between items-center">
+                        <span class="text-[10px] font-bold text-red-400 uppercase">Saldo pendiente</span>
+                        <span id="renta-edit-saldo-preview" class="font-black text-red-500 text-sm">$0</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-500 ml-1">Evento</label>
+                            <input type="date" id="renta-edit-fecha-evento"
+                                class="w-full p-2 mt-1 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-pink-400 transition-all">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-500 ml-1">Entrega</label>
+                            <input type="date" id="renta-edit-fecha-entrega"
+                                class="w-full p-2 mt-1 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-pink-400 transition-all">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-500 ml-1">Devolución</label>
+                            <input type="date" id="renta-edit-fecha-retorno"
+                                class="w-full p-2 mt-1 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-pink-400 transition-all">
+                        </div>
+                    </div>
+                    <button onclick="guardarRentaJS()"
+                        class="w-full py-2.5 bg-pink-600 text-white text-sm font-bold rounded-xl active:scale-95 transition-transform flex items-center justify-center gap-1.5">
+                        <span class="material-icons-round text-sm">save</span> Guardar cambios
+                    </button>
                 </div>
 
                 <!-- Info financiera -->
