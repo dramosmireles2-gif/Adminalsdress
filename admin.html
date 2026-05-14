@@ -15,11 +15,9 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 
     <style>
-        body { font-family: 'Lato', sans-serif; background-color: #f5f4f2; }
-
+        body { font-family: 'Lato', sans-serif; background-color: #f8f7f5; }
         .font-display { font-family: 'Playfair Display', serif; }
 
-        /* Scrollbar oculto */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
@@ -30,157 +28,309 @@
         .fc-event { cursor: pointer; border: none !important; border-radius: 6px !important; font-size: 0.7rem !important; }
         .fc-day-today { background-color: #fff0f6 !important; }
 
-        /* Tabs activo */
-        .tab-btn.active {
-            color: #d63384;
-            border-bottom-color: #d63384;
-        }
+        /* Sidebar nav active */
+        .sidebar-nav-btn { transition: background-color 0.15s ease, color 0.15s ease; }
+        .sidebar-nav-btn.active { background-color: #fdf2f8; color: #db2777 !important; }
+        .sidebar-nav-btn.active .material-icons-round { color: #db2777; }
 
-        /* Cards con hover suave */
-        .item-card { transition: box-shadow 0.2s ease, transform 0.2s ease; }
-        .item-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); transform: translateY(-1px); }
+        /* Item cards */
+        .item-card { transition: background-color 0.15s ease; }
+        .item-card:hover { background-color: #fafafa; }
 
         /* KPI cards */
         .kpi-card { border-left: 4px solid #d63384; }
         .kpi-card.deuda { border-left-color: #ef4444; }
 
-        /* Modal bottom sheet */
-        .modal-sheet { transition: transform 0.3s ease; }
+        /* Modal */
+        .modal-tab.active { color: #d63384; border-bottom-color: #d63384; }
+
+        /* Sidebar transition */
+        #sidebar { transition: transform 0.25s ease; }
     </style>
-  <link rel="manifest" href="./manifest.json">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="ALS Admin">
-  <link rel="apple-touch-icon" href="./Icono.jpg">
-  <meta name="theme-color" content="#d63384">
+
+    <link rel="manifest" href="./manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="ALS Admin">
+    <link rel="apple-touch-icon" href="./Icono.jpg">
+    <meta name="theme-color" content="#d63384">
 </head>
-<body class="min-h-screen pb-28">
+<body class="min-h-screen bg-[#f8f7f5]">
+
+<!-- ===== SIDEBAR OVERLAY (mobile) ===== -->
+<div id="sidebar-overlay"
+    class="fixed inset-0 bg-black/40 z-30 hidden lg:hidden"
+    onclick="toggleSidebar()"></div>
+
+<!-- ===== SIDEBAR ===== -->
+<aside id="sidebar"
+    class="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-100 z-40 flex flex-col -translate-x-full lg:translate-x-0">
+
+    <!-- Logo -->
+    <div class="px-6 py-5 border-b border-gray-100 flex-shrink-0">
+        <h1 class="font-display text-2xl font-bold text-gray-900 leading-none">
+            Als <span class="text-pink-600">Dress</span>
+        </h1>
+        <p class="text-[9px] font-bold text-gray-400 tracking-widest uppercase mt-1">Panel Admin</p>
+    </div>
+
+    <!-- Nav principal -->
+    <nav class="flex-1 p-3 space-y-0.5 overflow-y-auto no-scrollbar">
+        <button onclick="cambiarTab('inv')" id="btn-tab-inv"
+            class="sidebar-nav-btn active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-pink-600 transition-all">
+            <span class="material-icons-round text-xl">checkroom</span>
+            Vestidos
+        </button>
+        <button onclick="cambiarTab('rentas')" id="btn-tab-rentas"
+            class="sidebar-nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-400 transition-all hover:bg-gray-50">
+            <span class="material-icons-round text-xl">shopping_bag</span>
+            Rentas
+        </button>
+        <button onclick="cambiarTab('calendario')" id="btn-tab-calendario"
+            class="sidebar-nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-400 transition-all hover:bg-gray-50">
+            <span class="material-icons-round text-xl">calendar_month</span>
+            Calendario
+        </button>
+        <button onclick="cambiarTab('finanzas')" id="btn-tab-finanzas"
+            class="sidebar-nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-400 transition-all hover:bg-gray-50">
+            <span class="material-icons-round text-xl">payments</span>
+            Finanzas
+        </button>
+        <button onclick="cambiarTab('clientes')" id="btn-tab-clientes"
+            class="sidebar-nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-400 transition-all hover:bg-gray-50">
+            <span class="material-icons-round text-xl">people</span>
+            Clientes
+        </button>
+    </nav>
+
+    <!-- Nav inferior -->
+    <div class="p-3 border-t border-gray-100 flex-shrink-0 space-y-0.5">
+        <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-400 hover:bg-gray-50 transition-all">
+            <span class="material-icons-round text-xl">settings</span>
+            Configuración
+        </button>
+        <button onclick="cerrarSesion()"
+            class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all">
+            <span class="material-icons-round text-xl">logout</span>
+            Cerrar sesión
+        </button>
+    </div>
+
+    <!-- Sucursal + Nueva renta -->
+    <div class="p-3 border-t border-gray-100 flex-shrink-0 space-y-3">
+        <div class="flex items-center gap-3 px-3 py-2.5 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-all">
+            <div class="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span class="material-icons-round text-pink-500 text-base">store</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-xs font-bold text-gray-800 truncate">Als Dress</p>
+                <p class="text-[10px] text-gray-400 truncate">Sucursal Centro</p>
+            </div>
+            <span class="material-icons-round text-gray-400 text-base flex-shrink-0">expand_more</span>
+        </div>
+        <a href="nueva-renta.html"
+            class="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-xl font-bold text-sm hover:bg-blue-700 active:scale-95 transition-all shadow-sm shadow-blue-200">
+            <span class="material-icons-round text-base">add_shopping_cart</span>
+            Nueva renta
+        </a>
+    </div>
+</aside>
+
+<!-- ===== MAIN WRAPPER ===== -->
+<div class="lg:ml-64 flex flex-col min-h-screen">
 
     <!-- ===== HEADER ===== -->
-    <header class="bg-white sticky top-0 z-50 shadow-sm">
-        <div class="flex items-center justify-between px-4 py-3">
-            <button onclick="cerrarSesion()"
-                class="flex items-center gap-1.5 text-xs font-bold text-red-500 bg-red-50 px-3 py-2 rounded-xl border border-red-100 active:scale-95 transition-all">
-                <span class="material-icons-round text-base">logout</span>
-                Salir
-            </button>
+    <header class="sticky top-0 bg-white border-b border-gray-100 z-30 px-4 lg:px-6 py-3.5 flex items-center gap-3">
 
-            <div class="text-center">
-                <h1 class="font-display text-xl font-bold text-gray-900 leading-none">
-                    Als <span class="text-pink-600">Dress</span>
-                </h1>
-                <p class="text-[9px] font-bold text-gray-400 tracking-widest uppercase mt-0.5">Panel Admin</p>
-            </div>
+        <!-- Hamburger (solo mobile) -->
+        <button onclick="toggleSidebar()"
+            class="lg:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors flex-shrink-0">
+            <span class="material-icons-round text-gray-600 text-xl">menu</span>
+        </button>
 
-            <div class="text-[9px] font-mono bg-gray-100 px-2 py-1.5 rounded-lg text-gray-400 border border-gray-200">
-                v5.0
-            </div>
+        <!-- Buscador global -->
+        <div class="flex-1 relative max-w-xl">
+            <span class="absolute inset-y-0 left-3.5 flex items-center text-gray-400 pointer-events-none">
+                <span class="material-icons-round text-xl">search</span>
+            </span>
+            <input type="text" id="buscador-header"
+                placeholder="Buscar vestido por nombre, ID o código..."
+                class="w-full py-2.5 pl-11 pr-4 text-sm bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-pink-400 border border-gray-100 transition-all">
         </div>
 
-        <!-- Tabs -->
-        <nav class="flex border-t border-gray-100 overflow-x-auto no-scrollbar">
-            <button onclick="cambiarTab('inv')" id="btn-tab-inv"
-                class="tab-btn active flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-bold border-b-2 border-pink-600 text-pink-600 transition-all min-w-[60px]">
-                <span class="material-icons-round text-lg">checkroom</span>
-                Vestidos
-            </button>
-            <button onclick="cambiarTab('rentas')" id="btn-tab-rentas"
-                class="tab-btn flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-bold border-b-2 border-transparent text-gray-400 transition-all min-w-[60px]">
-                <span class="material-icons-round text-lg">shopping_bag</span>
-                Rentas
-            </button>
-            <button onclick="cambiarTab('calendario')" id="btn-tab-calendario"
-                class="tab-btn flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-bold border-b-2 border-transparent text-gray-400 transition-all min-w-[60px]">
-                <span class="material-icons-round text-lg">calendar_month</span>
-                Calendario
-            </button>
-            <button onclick="cambiarTab('finanzas')" id="btn-tab-finanzas"
-                class="tab-btn flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-bold border-b-2 border-transparent text-gray-400 transition-all min-w-[60px]">
-                <span class="material-icons-round text-lg">payments</span>
-                Finanzas
-            </button>
-            <button onclick="cambiarTab('clientes')" id="btn-tab-clientes"
-                class="tab-btn flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-bold border-b-2 border-transparent text-gray-400 transition-all min-w-[60px]">
-                <span class="material-icons-round text-lg">people</span>
-                Clientes
-            </button>
-        </nav>
+        <!-- Notificaciones -->
+        <button class="relative p-2.5 hover:bg-gray-100 rounded-xl transition-colors flex-shrink-0">
+            <span class="material-icons-round text-gray-500 text-xl">notifications</span>
+            <span class="absolute top-1.5 right-1.5 w-4 h-4 bg-pink-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">3</span>
+        </button>
+
+        <!-- Usuario -->
+        <div class="flex items-center gap-2.5 cursor-pointer hover:bg-gray-50 rounded-xl px-3 py-2 transition-all flex-shrink-0">
+            <img src="./Icono.jpg" alt="Admin"
+                class="w-9 h-9 rounded-full object-cover border-2 border-pink-100 flex-shrink-0"
+                onerror="this.src='https://placehold.co/36x36/fdf2f8/db2777?text=A'">
+            <div class="hidden sm:block">
+                <p class="text-sm font-bold text-gray-800 leading-tight">Admin</p>
+                <p class="text-[11px] text-gray-400 leading-tight">Administrador</p>
+            </div>
+            <span class="material-icons-round text-gray-400 text-base hidden sm:block">expand_more</span>
+        </div>
     </header>
 
     <!-- ===== CONTENIDO ===== -->
-    <main class="p-4 max-w-2xl mx-auto">
+    <main class="flex-1 p-4 lg:p-6 max-w-7xl w-full mx-auto">
 
-        <!-- VESTIDOS -->
-        <section id="sec-inv" class="tab-content space-y-4">
-            <!-- Categorías -->
-            <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-3">
-                <button onclick="filtrarTipo('')"
-                    class="whitespace-nowrap px-4 py-1.5 rounded-full bg-gray-800 text-white text-[10px] font-bold">
-                    Todo
-                </button>
-                <button onclick="filtrarTipo('Vestido')"
-                    class="whitespace-nowrap px-4 py-1.5 rounded-full bg-pink-50 text-pink-700 border border-pink-200 text-[10px] font-bold">
-                    👗 Vestidos
-                </button>
-                <button onclick="filtrarTipo('Zapato')"
-                    class="whitespace-nowrap px-4 py-1.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold">
-                    👠 Zapatos
-                </button>
-                <button onclick="filtrarTipo('Bolsa')"
-                    class="whitespace-nowrap px-4 py-1.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200 text-[10px] font-bold">
-                    👜 Bolsas
-                </button>
-            </div>
-            <!-- Buscador -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-3">
-                <div class="relative">
-                    <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
-                        <span class="material-icons-round text-xl">search</span>
-                    </span>
-                    <input type="text" id="buscador" placeholder="Buscar vestido por nombre o ID..."
-                        class="w-full py-2.5 pl-10 pr-4 text-sm bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-pink-400 border border-transparent transition-all">
+        <!-- ===== VESTIDOS ===== -->
+        <section id="sec-inv" class="tab-content space-y-5">
+
+            <!-- Encabezado de página -->
+            <div class="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Vestidos</h1>
+                    <p class="text-sm text-gray-400 mt-0.5">Administra tu catálogo de vestidos</p>
                 </div>
-                <!-- Filtros -->
-                <div class="flex gap-2 mt-3 overflow-x-auto pb-1 no-scrollbar">
-                    <button onclick="filtrarInventario('')"
-                        class="whitespace-nowrap px-4 py-1.5 rounded-full bg-gray-800 text-white text-[10px] font-bold">
-                        Todo
+                <div class="flex items-center gap-2.5 flex-shrink-0">
+                    <button class="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all shadow-sm active:scale-95">
+                        <span class="material-icons-round text-base">upload</span>
+                        <span class="hidden sm:inline">Importar</span>
                     </button>
-                    <button onclick="filtrarInventario('Disponible')"
-                        class="whitespace-nowrap px-4 py-1.5 rounded-full bg-green-50 text-green-700 border border-green-200 text-[10px] font-bold">
-                        ✓ Disponibles
-                    </button>
-                    <button onclick="filtrarInventario('Rentado')"
-                        class="whitespace-nowrap px-4 py-1.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold">
-                        Rentados
-                    </button>
-                    <button onclick="filtrarInventario('Limpieza')"
-                        class="whitespace-nowrap px-4 py-1.5 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200 text-[10px] font-bold">
-                        Limpieza
-                    </button>
+                    <a href="agregar.html"
+                        class="flex items-center gap-2 px-4 py-2.5 bg-pink-600 rounded-xl text-sm font-bold text-white hover:bg-pink-700 transition-all shadow-sm shadow-pink-200 active:scale-95">
+                        <span class="material-icons-round text-base">add</span>
+                        <span class="hidden sm:inline">Agregar vestido</span>
+                    </a>
                 </div>
-                <!-- Filtro talla (dinámico) -->
-                <div id="filtro-tallas-container" class="flex gap-1.5 mt-2 overflow-x-auto pb-1 no-scrollbar min-h-[26px]"></div>
             </div>
-            <div id="lista-admin" class="space-y-2">
-                <p class="text-center text-gray-400 mt-10 text-sm animate-pulse">Cargando inventario...</p>
+
+            <!-- Panel de filtros -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-5">
+
+                <!-- Fila 1: Buscar + Categoría -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">Buscar</p>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 pointer-events-none">
+                                <span class="material-icons-round text-lg">search</span>
+                            </span>
+                            <input type="text" id="buscador"
+                                placeholder="Buscar vestido por nombre, ID o código..."
+                                class="w-full py-2.5 pl-10 pr-4 text-sm bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-pink-400 border border-transparent transition-all">
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">Categoría</p>
+                        <div class="flex gap-2 flex-wrap">
+                            <button onclick="filtrarTipo('')" id="cat-btn-all" data-cat=""
+                                class="cat-btn px-4 py-2 rounded-xl bg-pink-600 text-white text-xs font-bold transition-all active:scale-95">
+                                Todas
+                            </button>
+                            <button onclick="filtrarTipo('Vestido')" id="cat-btn-vestido" data-cat="Vestido"
+                                class="cat-btn px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:border-pink-300 transition-all flex items-center gap-1.5 active:scale-95">
+                                <span class="material-icons-round text-sm">checkroom</span> Vestidos
+                            </button>
+                            <button onclick="filtrarTipo('Zapato')" id="cat-btn-zapato" data-cat="Zapato"
+                                class="cat-btn px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:border-pink-300 transition-all active:scale-95">
+                                👠 Zapatos
+                            </button>
+                            <button onclick="filtrarTipo('Bolsa')" id="cat-btn-bolsa" data-cat="Bolsa"
+                                class="cat-btn px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:border-pink-300 transition-all active:scale-95">
+                                👜 Bolsas
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fila 2: Estado + Tallas -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">Estado</p>
+                        <div class="flex gap-2 flex-wrap">
+                            <button onclick="filtrarInventario('')" data-estado=""
+                                class="estado-btn px-4 py-2 rounded-xl bg-pink-600 text-white text-xs font-bold transition-all active:scale-95">
+                                Todos
+                            </button>
+                            <button onclick="filtrarInventario('Disponible')" data-estado="Disponible"
+                                class="estado-btn px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:border-green-300 transition-all flex items-center gap-1.5 active:scale-95">
+                                <span class="w-2 h-2 bg-green-500 rounded-full"></span> Disponibles
+                            </button>
+                            <button onclick="filtrarInventario('Rentado')" data-estado="Rentado"
+                                class="estado-btn px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:border-blue-300 transition-all flex items-center gap-1.5 active:scale-95">
+                                <span class="w-2 h-2 bg-blue-500 rounded-full"></span> Rentados
+                            </button>
+                            <button onclick="filtrarInventario('Limpieza')" data-estado="Limpieza"
+                                class="estado-btn px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:border-yellow-300 transition-all flex items-center gap-1.5 active:scale-95">
+                                <span class="w-2 h-2 bg-yellow-500 rounded-full"></span> Limpieza
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">Tallas</p>
+                        <div id="filtro-tallas-container" class="flex gap-1.5 flex-wrap min-h-[32px]"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Barra de resultados -->
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+                <div class="flex items-center gap-2">
+                    <span class="material-icons-round text-gray-400 text-lg">inventory_2</span>
+                    <span id="contador-vestidos" class="text-sm font-bold text-gray-600">0 vestidos encontrados</span>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <span class="text-sm text-gray-400 font-medium hidden sm:block">Vista</span>
+                    <div class="flex items-center bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                        <button id="vista-grid-btn" onclick="setVista('grid')"
+                            class="p-2.5 hover:bg-gray-50 transition-colors">
+                            <span class="material-icons-round text-gray-400 text-xl">grid_view</span>
+                        </button>
+                        <button id="vista-list-btn" onclick="setVista('list')"
+                            class="p-2.5 bg-pink-50 transition-colors">
+                            <span class="material-icons-round text-pink-600 text-xl">view_list</span>
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm text-gray-400 font-medium hidden sm:block">Ordenar por</span>
+                        <select id="orden-select"
+                            onchange="renderizarInventario(datosGlobales.inventario)"
+                            class="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-gray-600 cursor-pointer focus:outline-none focus:border-pink-400 shadow-sm appearance-none pr-8"
+                            style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%239ca3af%22><path fill-rule=%22evenodd%22 d=%22M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z%22/></svg>');background-repeat:no-repeat;background-position:right 8px center;background-size:16px">
+                            <option value="reciente" selected>Más recientes</option>
+                            <option value="nombre">Nombre A-Z</option>
+                            <option value="precio_asc">Precio ↑</option>
+                            <option value="precio_desc">Precio ↓</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de vestidos -->
+            <div id="lista-admin" class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <p class="text-center text-gray-400 p-10 text-sm animate-pulse">Cargando inventario...</p>
             </div>
         </section>
 
-        <!-- RENTAS -->
-        <section id="sec-rentas" class="tab-content hidden space-y-4">
-            <div class="flex items-center justify-between">
-                <h2 class="font-display text-xl font-bold text-gray-900">Rentas</h2>
+        <!-- ===== RENTAS ===== -->
+        <section id="sec-rentas" class="tab-content hidden space-y-5">
+            <div class="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Rentas</h1>
+                    <p class="text-sm text-gray-400 mt-0.5">Gestiona las rentas activas e historial</p>
+                </div>
+                <a href="nueva-renta.html"
+                    class="flex items-center gap-2 px-4 py-2.5 bg-pink-600 rounded-xl text-sm font-bold text-white hover:bg-pink-700 transition-all shadow-sm shadow-pink-200 active:scale-95">
+                    <span class="material-icons-round text-base">add_shopping_cart</span>
+                    Nueva renta
+                </a>
             </div>
-            <!-- Filtros -->
-<div class="flex gap-2">
+            <div class="flex gap-2">
                 <button onclick="filtrarRentas('activas')" id="chip-rentas-activas"
-                    class="px-4 py-1.5 rounded-full bg-gray-800 text-white text-[10px] font-bold transition-all">
+                    class="px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-bold transition-all">
                     En curso
                 </button>
                 <button onclick="filtrarRentas('historial')" id="chip-rentas-historial"
-                    class="px-4 py-1.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-bold transition-all">
+                    class="px-5 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-500 text-sm font-bold transition-all hover:bg-gray-50">
                     Historial
                 </button>
             </div>
@@ -189,471 +339,463 @@
             </div>
         </section>
 
-        <!-- CALENDARIO -->
-        <section id="sec-calendario" class="tab-content hidden space-y-4">
-            <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
+        <!-- ===== CALENDARIO ===== -->
+        <section id="sec-calendario" class="tab-content hidden space-y-5">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Calendario</h1>
+                <p class="text-sm text-gray-400 mt-0.5">Entregas y devoluciones programadas</p>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                 <div id="calendar" class="text-sm"></div>
             </div>
-            <div class="flex gap-6 justify-center text-[11px] text-gray-500">
-                <span class="flex items-center gap-1.5">
-                    <div class="w-2.5 h-2.5 rounded-full bg-pink-500"></div> Salida (OUT)
+            <div class="flex gap-6 justify-center text-xs text-gray-500">
+                <span class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-pink-500"></div> Salida (OUT)
                 </span>
-                <span class="flex items-center gap-1.5">
-                    <div class="w-2.5 h-2.5 rounded-full bg-gray-400"></div> Regreso (IN)
+                <span class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-gray-400"></div> Regreso (IN)
                 </span>
             </div>
         </section>
 
-        <!-- FINANZAS -->
+        <!-- ===== FINANZAS ===== -->
         <section id="sec-finanzas" class="tab-content hidden space-y-5">
-            <h2 class="font-display text-xl font-bold text-gray-900">Resumen Financiero</h2>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Finanzas</h1>
+                <p class="text-sm text-gray-400 mt-0.5">Resumen financiero del negocio</p>
+            </div>
 
-            <div class="grid grid-cols-2 gap-3">
-                <div class="kpi-card bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+            <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="kpi-card bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                     <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Ingresos Renta</p>
                     <h3 class="text-2xl font-black text-gray-900 mt-1 font-display" id="kpi-ingresos">$0</h3>
                 </div>
-                <div class="kpi-card deuda bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                <div class="kpi-card deuda bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                     <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Por Cobrar</p>
                     <h3 class="text-2xl font-black text-red-500 mt-1 font-display" id="kpi-deuda">$0</h3>
                 </div>
-            </div>
-            <div class="kpi-card bg-white p-4 rounded-2xl shadow-sm border border-gray-100" style="border-left-color:#7c3aed">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Ingresos por Ventas</p>
-                        <h3 class="text-2xl font-black text-purple-600 mt-1 font-display" id="kpi-ventas">$0</h3>
+                <div class="kpi-card bg-white p-5 rounded-2xl shadow-sm border border-gray-100 col-span-2 lg:col-span-1" style="border-left-color:#7c3aed">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Ventas</p>
+                            <h3 class="text-2xl font-black text-purple-600 mt-1 font-display" id="kpi-ventas">$0</h3>
+                        </div>
+                        <span id="kpi-vendidos" class="text-xs bg-purple-50 text-purple-600 px-3 py-1.5 rounded-full font-bold border border-purple-100">0 vendidos</span>
                     </div>
-                    <span id="kpi-vendidos" class="text-[10px] bg-purple-50 text-purple-600 px-2.5 py-1 rounded-full font-bold border border-purple-100">0 vendidos</span>
                 </div>
             </div>
 
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Ingresos por Mes</p>
-                <canvas id="chart-mensual" height="200"></canvas>
-            </div>
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Estado del Inventario</p>
-                <div class="w-2/3 mx-auto">
-                    <canvas id="chart-estados"></canvas>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Ingresos por Mes</p>
+                    <canvas id="chart-mensual" height="200"></canvas>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Estado del Inventario</p>
+                    <div class="w-2/3 mx-auto">
+                        <canvas id="chart-estados"></canvas>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- CLIENTES -->
-        <section id="sec-clientes" class="tab-content hidden space-y-4">
-            <h2 class="font-display text-xl font-bold text-gray-900">Clientes</h2>
+        <!-- ===== CLIENTES ===== -->
+        <section id="sec-clientes" class="tab-content hidden space-y-5">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Clientes</h1>
+                <p class="text-sm text-gray-400 mt-0.5">Gestiona tu base de clientes</p>
+            </div>
             <div id="lista-clientes" class="space-y-2"></div>
         </section>
 
-        <!-- HISTORIAL (oculto, usado internamente) -->
+        <!-- HISTORIAL (interno) -->
         <section id="sec-historial" class="tab-content hidden space-y-4">
             <div id="lista-historial" class="space-y-3"></div>
         </section>
 
     </main>
+</div>
 
-    <!-- ===== MODAL EDITAR VESTIDO ===== -->
-    <div id="modal-editar" class="hidden fixed inset-0 bg-black/60 z-[60] flex items-end sm:items-center justify-center backdrop-blur-sm">
-        <div class="bg-white w-full sm:w-[440px] rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
+<!-- ===== MODAL EDITAR VESTIDO ===== -->
+<div id="modal-editar" class="hidden fixed inset-0 bg-black/60 z-[60] flex items-end sm:items-center justify-center backdrop-blur-sm">
+    <div class="bg-white w-full sm:w-[440px] rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
 
-            <div class="flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0">
-                <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
-            </div>
+        <div class="flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0">
+            <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
+        </div>
 
-            <!-- Tabs -->
-            <div class="flex border-b border-gray-100 flex-shrink-0">
-                <button onclick="cambiarTabModal('estado')" id="modal-tab-estado"
-                    class="modal-tab flex-1 py-3 text-xs font-bold text-pink-600 border-b-2 border-pink-600 transition-all">
-                    Estado
-                </button>
-                <button onclick="cambiarTabModal('editar')" id="modal-tab-editar"
-                    class="modal-tab flex-1 py-3 text-xs font-bold text-gray-400 border-b-2 border-transparent transition-all">
-                    Editar
-                </button>
-                <button onclick="cambiarTabModal('historial')" id="modal-tab-historial"
-                    class="modal-tab flex-1 py-3 text-xs font-bold text-gray-400 border-b-2 border-transparent transition-all">
-                    Historial
-                </button>
-            </div>
+        <div class="flex border-b border-gray-100 flex-shrink-0">
+            <button onclick="cambiarTabModal('estado')" id="modal-tab-estado"
+                class="modal-tab flex-1 py-3 text-xs font-bold text-pink-600 border-b-2 border-pink-600 transition-all">
+                Estado
+            </button>
+            <button onclick="cambiarTabModal('editar')" id="modal-tab-editar"
+                class="modal-tab flex-1 py-3 text-xs font-bold text-gray-400 border-b-2 border-transparent transition-all">
+                Editar
+            </button>
+            <button onclick="cambiarTabModal('historial')" id="modal-tab-historial"
+                class="modal-tab flex-1 py-3 text-xs font-bold text-gray-400 border-b-2 border-transparent transition-all">
+                Historial
+            </button>
+        </div>
 
-            <div class="overflow-y-auto flex-1">
-                <!-- TAB ESTADO -->
-                <div id="modal-content-estado" class="p-5 space-y-4">
-                    <div>
-                        <h2 class="font-display text-xl font-bold text-gray-900 leading-tight" id="modal-titulo">Nombre</h2>
-                        <p class="text-xs text-gray-400 font-mono mt-1" id="modal-subtitulo">ID...</p>
-                    </div>
-                    <div class="flex items-center justify-between p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
-                        <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center">
-                                <span class="material-icons-round text-pink-500 text-lg">language</span>
-                            </div>
-                            <div>
-                                <p class="text-xs font-bold text-gray-700">Visible en catálogo web</p>
-                                <p class="text-[10px] text-gray-400">Mostrar en la página pública</p>
-                            </div>
+        <div class="overflow-y-auto flex-1">
+            <!-- TAB ESTADO -->
+            <div id="modal-content-estado" class="p-5 space-y-4">
+                <div>
+                    <h2 class="font-display text-xl font-bold text-gray-900 leading-tight" id="modal-titulo">Nombre</h2>
+                    <p class="text-xs text-gray-400 font-mono mt-1" id="modal-subtitulo">ID...</p>
+                </div>
+                <div class="flex items-center justify-between p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center">
+                            <span class="material-icons-round text-pink-500 text-lg">language</span>
                         </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="toggle-publicado" class="sr-only peer" onchange="cambiarVisibilidadWeb(this.checked)">
-                            <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500"></div>
-                        </label>
+                        <div>
+                            <p class="text-xs font-bold text-gray-700">Visible en catálogo web</p>
+                            <p class="text-[10px] text-gray-400">Mostrar en la página pública</p>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-1 gap-2">
-                        <button onclick="guardarEstado('Disponible')" class="p-3.5 rounded-2xl border border-green-100 bg-green-50 text-green-700 font-bold flex items-center gap-3 active:scale-95 transition-transform text-sm">
-                            <span class="material-icons-round text-green-500">check_circle</span>Marcar como Disponible
-                        </button>
-                        <button onclick="guardarEstado('Rentado')" class="p-3.5 rounded-2xl border border-blue-100 bg-blue-50 text-blue-700 font-bold flex items-center gap-3 active:scale-95 transition-transform text-sm">
-                            <span class="material-icons-round text-blue-500">shopping_bag</span>Marcar como Rentado
-                        </button>
-                        <button onclick="guardarEstado('Limpieza')" class="p-3.5 rounded-2xl border border-yellow-100 bg-yellow-50 text-yellow-700 font-bold flex items-center gap-3 active:scale-95 transition-transform text-sm">
-                            <span class="material-icons-round text-yellow-500">local_laundry_service</span>Enviar a Limpieza
-                        </button>
-                        <button onclick="venderVestido()" class="p-3.5 rounded-2xl border border-purple-100 bg-purple-50 text-purple-700 font-bold flex items-center gap-3 active:scale-95 transition-transform text-sm">
-                            <span class="material-icons-round text-purple-500">sell</span>Marcar como Vendido
-                        </button>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="toggle-publicado" class="sr-only peer" onchange="cambiarVisibilidadWeb(this.checked)">
+                        <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500"></div>
+                    </label>
+                </div>
+                <div class="grid grid-cols-1 gap-2">
+                    <button onclick="guardarEstado('Disponible')" class="p-3.5 rounded-2xl border border-green-100 bg-green-50 text-green-700 font-bold flex items-center gap-3 active:scale-95 transition-transform text-sm">
+                        <span class="material-icons-round text-green-500">check_circle</span>Marcar como Disponible
+                    </button>
+                    <button onclick="guardarEstado('Rentado')" class="p-3.5 rounded-2xl border border-blue-100 bg-blue-50 text-blue-700 font-bold flex items-center gap-3 active:scale-95 transition-transform text-sm">
+                        <span class="material-icons-round text-blue-500">shopping_bag</span>Marcar como Rentado
+                    </button>
+                    <button onclick="guardarEstado('Limpieza')" class="p-3.5 rounded-2xl border border-yellow-100 bg-yellow-50 text-yellow-700 font-bold flex items-center gap-3 active:scale-95 transition-transform text-sm">
+                        <span class="material-icons-round text-yellow-500">local_laundry_service</span>Enviar a Limpieza
+                    </button>
+                    <button onclick="venderVestido()" class="p-3.5 rounded-2xl border border-purple-100 bg-purple-50 text-purple-700 font-bold flex items-center gap-3 active:scale-95 transition-transform text-sm">
+                        <span class="material-icons-round text-purple-500">sell</span>Marcar como Vendido
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB EDITAR -->
+            <div id="modal-content-editar" class="p-5 space-y-3 hidden">
+                <div>
+                    <label class="text-xs font-bold text-gray-600 ml-1">Nombre</label>
+                    <input type="text" id="edit-nombre" class="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-bold text-gray-600 ml-1">Tipo</label>
+                        <select id="edit-tipo" onchange="actualizarTallaEdicion()" class="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all cursor-pointer">
+                            <option value="Vestido">👗 Vestido</option>
+                            <option value="Zapato">👠 Zapato</option>
+                            <option value="Bolsa">👜 Bolsa</option>
+                            <option value="Accesorios">💍 Accesorios</option>
+                        </select>
+                    </div>
+                    <div id="edit-contenedor-talla">
+                        <label class="text-xs font-bold text-gray-600 ml-1">Talla</label>
+                        <select id="edit-talla" class="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all cursor-pointer font-bold text-gray-800"></select>
                     </div>
                 </div>
-
-                <!-- TAB EDITAR -->
-                <div id="modal-content-editar" class="p-5 space-y-3 hidden">
+                <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="text-xs font-bold text-gray-600 ml-1">Nombre</label>
-                        <input type="text" id="edit-nombre" class="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="text-xs font-bold text-gray-600 ml-1">Tipo</label>
-                            <select id="edit-tipo" onchange="actualizarTallaEdicion()" class="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all cursor-pointer">
-                                <option value="Vestido">👗 Vestido</option>
-                                <option value="Zapato">👠 Zapato</option>
-                                <option value="Bolsa">👜 Bolsa</option>
-                                <option value="Accesorios">💍 Accesorios</option>
-                            </select>
-                        </div>
-                        <div id="edit-contenedor-talla">
-                            <label class="text-xs font-bold text-gray-600 ml-1">Talla</label>
-                            <select id="edit-talla" class="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all cursor-pointer font-bold text-gray-800"></select>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="text-xs font-bold text-gray-600 ml-1">Color</label>
-                            <input type="text" id="edit-color" list="edit-colores-list" autocomplete="off" class="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
-                            <datalist id="edit-colores-list">
-                                <option value="Negro"><option value="Blanco"><option value="Rojo">
-                                <option value="Azul Rey"><option value="Verde Esmeralda"><option value="Rosa Palo">
-                                <option value="Dorado"><option value="Plateado"><option value="Vino">
-                            </datalist>
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-gray-600 ml-1">Precio Renta</label>
-                            <div class="relative mt-1">
-                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">$</span>
-                                <input type="number" id="edit-precio" class="w-full p-3 pl-7 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
-                            </div>
-                        </div>
+                        <label class="text-xs font-bold text-gray-600 ml-1">Color</label>
+                        <input type="text" id="edit-color" list="edit-colores-list" autocomplete="off" class="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
+                        <datalist id="edit-colores-list">
+                            <option value="Negro"><option value="Blanco"><option value="Rojo">
+                            <option value="Azul Rey"><option value="Verde Esmeralda"><option value="Rosa Palo">
+                            <option value="Dorado"><option value="Plateado"><option value="Vino">
+                        </datalist>
                     </div>
                     <div>
-                        <label class="text-xs font-bold text-gray-600 ml-1">Precio Venta <span class="text-gray-400 font-normal">(opcional)</span></label>
+                        <label class="text-xs font-bold text-gray-600 ml-1">Precio Renta</label>
                         <div class="relative mt-1">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400 text-sm pointer-events-none">$</span>
-                            <input type="number" id="edit-precio-venta" placeholder="Sin definir" class="w-full p-3 pl-7 bg-purple-50 border border-purple-100 rounded-xl text-sm focus:outline-none focus:border-purple-400 transition-all">
-                        </div>
-                    </div>
-                    <button onclick="guardarEdicion()" class="w-full py-3.5 bg-gray-900 text-white font-bold rounded-2xl text-sm hover:bg-pink-600 active:scale-95 transition-all flex items-center justify-center gap-2 mt-2">
-                        <span class="material-icons-round text-base">save</span>Guardar Cambios
-                    </button>
-                </div>
-
-                <!-- TAB HISTORIAL -->
-                <div id="modal-content-historial" class="p-5 hidden">
-                    <div class="flex items-center justify-between mb-4">
-                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Rentas de este vestido</p>
-                        <span id="modal-total-rentas" class="text-xs bg-pink-50 text-pink-600 px-2.5 py-1 rounded-full font-bold border border-pink-100">0 rentas</span>
-                    </div>
-                    <div id="modal-lista-historial" class="space-y-2"></div>
-                </div>
-            </div>
-
-            <div class="p-4 border-t border-gray-100 flex-shrink-0">
-                <button onclick="cerrarModal()" class="w-full py-3 text-gray-400 text-xs font-bold uppercase tracking-widest">Cerrar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ===== MODAL DETALLE RENTA ===== -->
-    <div id="modal-renta-detalle" class="hidden fixed inset-0 bg-black/70 z-[60] flex items-end sm:items-center justify-center backdrop-blur-sm">
-        <div class="bg-white w-full sm:w-[420px] rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] overflow-y-auto">
-
-            <div class="flex justify-center pt-3 pb-1 sm:hidden">
-                <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
-            </div>
-
-            <div class="p-6">
-                <!-- Cabecera -->
-                <div class="flex gap-4 mb-5">
-                    <img id="renta-modal-foto" src="" alt="Vestido"
-                        class="w-20 h-24 object-cover rounded-2xl bg-gray-100 shadow-sm border border-gray-100 flex-shrink-0"
-                        onerror="this.src='https://placehold.co/100x120?text=Sin+Foto'">
-                    <div class="flex-1">
-                        <h2 class="font-display text-lg font-bold text-gray-900 leading-tight" id="renta-modal-cliente">Cliente</h2>
-                        <p class="text-sm text-pink-600 font-bold mt-1" id="renta-modal-vestido">Vestido</p>
-                        <div class="flex items-center gap-2 mt-2 flex-wrap">
-                            <span id="renta-modal-id" class="text-[9px] bg-gray-100 px-2 py-0.5 rounded-lg text-gray-400 font-mono">ID</span>
-                            <span id="renta-badge-status" class="text-[9px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold hidden">FINALIZADA</span>
-                            <span id="renta-badge-entregada" class="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold hidden">ENTREGADO</span>
-                            <button id="btn-editar-renta" onclick="toggleEditarRenta()"
-                                class="text-[9px] font-bold text-pink-500 px-2 py-0.5 rounded-lg hover:bg-pink-50 transition-colors">
-                                Editar
-                            </button>
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">$</span>
+                            <input type="number" id="edit-precio" class="w-full p-3 pl-7 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
                         </div>
                     </div>
                 </div>
-
-                <!-- Sección edición inline -->
-                <div id="renta-edit-section" class="hidden bg-gray-50 rounded-2xl border border-gray-200 p-4 mb-4 space-y-3">
-                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Editar renta</p>
-                    <div class="grid grid-cols-3 gap-2">
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-500 ml-1">Total</label>
-                            <div class="relative mt-1">
-                                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">$</span>
-                                <input type="number" id="renta-edit-total" oninput="recalcularSaldoEdit()"
-                                    class="w-full p-2 pl-5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-500 ml-1">Descuento</label>
-                            <div class="relative mt-1">
-                                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">$</span>
-                                <input type="number" id="renta-edit-descuento" oninput="recalcularSaldoEdit()"
-                                    class="w-full p-2 pl-5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-500 ml-1">Abono</label>
-                            <div class="relative mt-1">
-                                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">$</span>
-                                <input type="number" id="renta-edit-abono" oninput="recalcularSaldoEdit()"
-                                    class="w-full p-2 pl-5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-red-50 border border-red-100 rounded-xl px-3 py-2 flex justify-between items-center">
-                        <span class="text-[10px] font-bold text-red-400 uppercase">Saldo pendiente</span>
-                        <span id="renta-edit-saldo-preview" class="font-black text-red-500 text-sm">$0</span>
-                    </div>
-                    <div class="grid grid-cols-3 gap-2">
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-500 ml-1">Evento</label>
-                            <input type="date" id="renta-edit-fecha-evento"
-                                class="w-full p-2 mt-1 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-pink-400 transition-all">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-500 ml-1">Entrega</label>
-                            <input type="date" id="renta-edit-fecha-entrega"
-                                class="w-full p-2 mt-1 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-pink-400 transition-all">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-500 ml-1">Devolución</label>
-                            <input type="date" id="renta-edit-fecha-retorno"
-                                class="w-full p-2 mt-1 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-pink-400 transition-all">
-                        </div>
-                    </div>
-                    <button onclick="guardarRentaJS()"
-                        class="w-full py-2.5 bg-pink-600 text-white text-sm font-bold rounded-xl active:scale-95 transition-transform flex items-center justify-center gap-1.5">
-                        <span class="material-icons-round text-sm">save</span> Guardar cambios
-                    </button>
-                </div>
-
-                <!-- Info financiera -->
-                <div class="bg-gray-50 p-4 rounded-2xl space-y-3 mb-4 border border-gray-100">
-                    <div class="flex justify-between items-center border-b border-gray-200 pb-3">
-                        <span class="text-xs text-gray-500 font-bold uppercase tracking-wide">Saldo Pendiente</span>
-                        <span id="renta-modal-saldo" class="text-2xl font-black text-red-500 font-display">$0</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3 text-xs text-gray-600">
-                        <div class="bg-white p-2.5 rounded-xl border border-gray-100">
-                            <p class="text-gray-400 uppercase font-bold text-[9px] tracking-wider mb-0.5">Entrega</p>
-                            <b id="renta-modal-fecha-e" class="text-gray-800 text-sm">--/--/--</b>
-                        </div>
-                        <div class="bg-white p-2.5 rounded-xl border border-gray-100">
-                            <p class="text-gray-400 uppercase font-bold text-[9px] tracking-wider mb-0.5">Devolución</p>
-                            <b id="renta-modal-fecha-r" class="text-gray-800 text-sm">--/--/--</b>
-                        </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-600 ml-1">Precio Venta <span class="text-gray-400 font-normal">(opcional)</span></label>
+                    <div class="relative mt-1">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400 text-sm pointer-events-none">$</span>
+                        <input type="number" id="edit-precio-venta" placeholder="Sin definir" class="w-full p-3 pl-7 bg-purple-50 border border-purple-100 rounded-xl text-sm focus:outline-none focus:border-purple-400 transition-all">
                     </div>
                 </div>
-
-                <!-- Ajustes -->
-                <div class="mb-5">
-                    <div class="flex items-center justify-between mb-1.5">
-                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
-                            <span class="material-icons-round text-sm text-yellow-500">info</span>
-                            Ajustes / Notas
-                        </p>
-                        <button id="btn-editar-ajustes" onclick="toggleEditarAjustes()"
-                            class="text-[10px] font-bold text-pink-500 px-2 py-0.5 rounded-lg hover:bg-pink-50 transition-colors">
-                            Editar
-                        </button>
-                    </div>
-                    <div id="renta-modal-ajustes"
-                        class="w-full p-3 bg-yellow-50 border border-yellow-100 rounded-2xl text-xs text-yellow-800 italic leading-relaxed">
-                        Sin ajustes registrados.
-                    </div>
-                    <div id="ajustes-edit-section" class="hidden space-y-2">
-                        <textarea id="ajustes-textarea" rows="3"
-                            class="w-full p-3 bg-yellow-50 border border-yellow-300 rounded-2xl text-xs text-yellow-800 leading-relaxed resize-none focus:outline-none focus:border-yellow-500 transition-all"></textarea>
-                        <button onclick="guardarAjustesRenta()"
-                            class="w-full py-2.5 bg-yellow-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-transform flex items-center justify-center gap-1.5">
-                            <span class="material-icons-round text-sm">save</span>Guardar Ajustes
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Acciones -->
-                <div class="space-y-2.5">
-                    <div class="grid grid-cols-2 gap-2">
-                        <button id="btn-whatsapp-renta" onclick="enviarTicketWhatsApp()"
-                            class="w-full py-3 rounded-2xl bg-green-500 text-white text-sm font-bold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-transform">
-                            <span class="material-icons-round text-base">chat</span>
-                            Recordatorio
-                        </button>
-                        <button id="btn-recibo-renta" onclick="enviarReciboWhatsApp()"
-                            class="w-full py-3 rounded-2xl bg-blue-500 text-white text-sm font-bold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-transform hidden">
-                            <span class="material-icons-round text-base">receipt</span>
-                            Recibo
-                        </button>
-                    </div>
-
-                    <div id="zona-acciones-renta" class="space-y-2">
-                        <button id="btn-entregar" onclick="entregarVestidoJS()"
-                            class="w-full p-3.5 rounded-2xl bg-pink-600 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-sm active:scale-95 hidden">
-                            <span class="material-icons-round text-base">checkroom</span>
-                            Entregar Vestido al Cliente
-                        </button>
-                        <button id="btn-devolucion" onclick="recibirDevolucionJS()"
-                            class="w-full p-3.5 rounded-2xl bg-blue-600 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-sm active:scale-95 hidden">
-                            <span class="material-icons-round text-base">assignment_return</span>
-                            Recibir Devolución
-                        </button>
-                        <button id="btn-cancelar" onclick="cancelarRentaJS()"
-                            class="w-full p-3.5 rounded-2xl border border-red-200 bg-red-50 text-red-600 text-sm font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform hidden">
-                            <span class="material-icons-round text-base">cancel</span>
-                            Cancelar Renta
-                        </button>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button onclick="guardarEstadoRenta('Disponible')"
-                                class="p-3 rounded-2xl border border-gray-200 bg-white text-gray-700 text-xs font-bold flex flex-col items-center gap-1 active:scale-95">
-                                <span class="material-icons-round text-xl text-green-500">check_circle</span>
-                                Disponible
-                            </button>
-                            <button onclick="guardarEstadoRenta('Limpieza')"
-                                class="p-3 rounded-2xl border border-gray-200 bg-white text-gray-700 text-xs font-bold flex flex-col items-center gap-1 active:scale-95">
-                                <span class="material-icons-round text-xl text-yellow-500">local_laundry_service</span>
-                                Limpieza
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <button onclick="cerrarModalRenta()"
-                    class="w-full py-4 text-gray-400 text-xs font-bold uppercase tracking-widest mt-3">
-                    Cerrar
+                <button onclick="guardarEdicion()" class="w-full py-3.5 bg-gray-900 text-white font-bold rounded-2xl text-sm hover:bg-pink-600 active:scale-95 transition-all flex items-center justify-center gap-2 mt-2">
+                    <span class="material-icons-round text-base">save</span>Guardar Cambios
                 </button>
             </div>
+
+            <!-- TAB HISTORIAL -->
+            <div id="modal-content-historial" class="p-5 hidden">
+                <div class="flex items-center justify-between mb-4">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Rentas de este vestido</p>
+                    <span id="modal-total-rentas" class="text-xs bg-pink-50 text-pink-600 px-2.5 py-1 rounded-full font-bold border border-pink-100">0 rentas</span>
+                </div>
+                <div id="modal-lista-historial" class="space-y-2"></div>
+            </div>
+        </div>
+
+        <div class="p-4 border-t border-gray-100 flex-shrink-0">
+            <button onclick="cerrarModal()" class="w-full py-3 text-gray-400 text-xs font-bold uppercase tracking-widest">Cerrar</button>
         </div>
     </div>
+</div>
 
-    <!-- ===== MODAL HISTORIAL CLIENTE ===== -->
-    <div id="modal-cliente-historial" class="hidden fixed inset-0 bg-black/70 z-[70] flex items-end sm:items-center justify-center backdrop-blur-sm">
-        <div class="bg-white w-full sm:w-[420px] rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[88vh] flex flex-col">
+<!-- ===== MODAL DETALLE RENTA ===== -->
+<div id="modal-renta-detalle" class="hidden fixed inset-0 bg-black/70 z-[60] flex items-end sm:items-center justify-center backdrop-blur-sm">
+    <div class="bg-white w-full sm:w-[420px] rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] overflow-y-auto">
 
-            <div class="flex justify-center pt-3 pb-1 sm:hidden">
-                <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
-            </div>
+        <div class="flex justify-center pt-3 pb-1 sm:hidden">
+            <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
+        </div>
 
-            <div class="p-6 border-b border-gray-100">
-                <div class="flex items-center gap-4">
-                    <div class="h-14 w-14 rounded-2xl bg-pink-50 flex items-center justify-center text-pink-600 font-bold text-2xl border border-pink-100 font-display"
-                        id="cliente-modal-avatar">A</div>
-                    <div class="flex-1">
-                        <h2 class="font-display text-lg font-bold text-gray-900 leading-tight" id="cliente-modal-nombre">Nombre</h2>
-                        <p class="text-xs text-gray-400 font-mono mt-0.5" id="cliente-modal-id">ID</p>
-                        <a id="cliente-modal-whatsapp" href="#" target="_blank"
-                            class="inline-flex items-center gap-1.5 mt-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full text-xs font-bold border border-green-100">
-                            <span class="material-icons-round text-sm">chat</span> WhatsApp
-                        </a>
-                    </div>
-                    <div class="flex flex-col items-end gap-1">
-                        <span id="cliente-total-rentas"
-                            class="bg-pink-50 text-pink-600 px-3 py-1 rounded-full text-[10px] font-bold border border-pink-100">
-                            0 Rentas
-                        </span>
-                        <span id="cliente-credito-badge"
-                            class="hidden bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-[10px] font-bold border border-indigo-100">
-                            $0 crédito
-                        </span>
-                        <button onclick="toggleEditarCliente()" id="btn-editar-cliente"
-                            class="text-[10px] font-bold text-pink-500 px-2 py-0.5 rounded-lg hover:bg-pink-50 transition-colors mt-1">
+        <div class="p-6">
+            <div class="flex gap-4 mb-5">
+                <img id="renta-modal-foto" src="" alt="Vestido"
+                    class="w-20 h-24 object-cover rounded-2xl bg-gray-100 shadow-sm border border-gray-100 flex-shrink-0"
+                    onerror="this.src='https://placehold.co/100x120?text=Sin+Foto'">
+                <div class="flex-1">
+                    <h2 class="font-display text-lg font-bold text-gray-900 leading-tight" id="renta-modal-cliente">Cliente</h2>
+                    <p class="text-sm text-pink-600 font-bold mt-1" id="renta-modal-vestido">Vestido</p>
+                    <div class="flex items-center gap-2 mt-2 flex-wrap">
+                        <span id="renta-modal-id" class="text-[9px] bg-gray-100 px-2 py-0.5 rounded-lg text-gray-400 font-mono">ID</span>
+                        <span id="renta-badge-status" class="text-[9px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold hidden">FINALIZADA</span>
+                        <span id="renta-badge-entregada" class="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold hidden">ENTREGADO</span>
+                        <button id="btn-editar-renta" onclick="toggleEditarRenta()"
+                            class="text-[9px] font-bold text-pink-500 px-2 py-0.5 rounded-lg hover:bg-pink-50 transition-colors">
                             Editar
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Sección de edición inline -->
-            <div id="cliente-edit-section" class="hidden px-6 py-4 border-b border-gray-100 space-y-3 bg-gray-50">
-                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Editar datos del cliente</p>
-                <div>
-                    <label class="text-xs font-bold text-gray-600 ml-1">Nombre Completo</label>
-                    <input type="text" id="cliente-edit-nombre"
-                        class="w-full p-3 mt-1 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
+            <div id="renta-edit-section" class="hidden bg-gray-50 rounded-2xl border border-gray-200 p-4 mb-4 space-y-3">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Editar renta</p>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-500 ml-1">Total</label>
+                        <div class="relative mt-1">
+                            <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">$</span>
+                            <input type="number" id="renta-edit-total" oninput="recalcularSaldoEdit()"
+                                class="w-full p-2 pl-5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-500 ml-1">Descuento</label>
+                        <div class="relative mt-1">
+                            <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">$</span>
+                            <input type="number" id="renta-edit-descuento" oninput="recalcularSaldoEdit()"
+                                class="w-full p-2 pl-5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-500 ml-1">Abono</label>
+                        <div class="relative mt-1">
+                            <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">$</span>
+                            <input type="number" id="renta-edit-abono" oninput="recalcularSaldoEdit()"
+                                class="w-full p-2 pl-5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <label class="text-xs font-bold text-gray-600 ml-1">Teléfono (WhatsApp)</label>
-                    <input type="tel" id="cliente-edit-tel"
-                        class="w-full p-3 mt-1 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
+                <div class="bg-red-50 border border-red-100 rounded-xl px-3 py-2 flex justify-between items-center">
+                    <span class="text-[10px] font-bold text-red-400 uppercase">Saldo pendiente</span>
+                    <span id="renta-edit-saldo-preview" class="font-black text-red-500 text-sm">$0</span>
                 </div>
-                <button onclick="guardarClienteJS()"
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-500 ml-1">Evento</label>
+                        <input type="date" id="renta-edit-fecha-evento"
+                            class="w-full p-2 mt-1 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-pink-400 transition-all">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-500 ml-1">Entrega</label>
+                        <input type="date" id="renta-edit-fecha-entrega"
+                            class="w-full p-2 mt-1 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-pink-400 transition-all">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-500 ml-1">Devolución</label>
+                        <input type="date" id="renta-edit-fecha-retorno"
+                            class="w-full p-2 mt-1 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-pink-400 transition-all">
+                    </div>
+                </div>
+                <button onclick="guardarRentaJS()"
                     class="w-full py-2.5 bg-pink-600 text-white text-sm font-bold rounded-xl active:scale-95 transition-transform flex items-center justify-center gap-1.5">
                     <span class="material-icons-round text-sm">save</span> Guardar cambios
                 </button>
             </div>
 
-            <div class="px-6 pt-4 pb-2">
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Historial de Rentas</p>
+            <div class="bg-gray-50 p-4 rounded-2xl space-y-3 mb-4 border border-gray-100">
+                <div class="flex justify-between items-center border-b border-gray-200 pb-3">
+                    <span class="text-xs text-gray-500 font-bold uppercase tracking-wide">Saldo Pendiente</span>
+                    <span id="renta-modal-saldo" class="text-2xl font-black text-red-500 font-display">$0</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-xs text-gray-600">
+                    <div class="bg-white p-2.5 rounded-xl border border-gray-100">
+                        <p class="text-gray-400 uppercase font-bold text-[9px] tracking-wider mb-0.5">Entrega</p>
+                        <b id="renta-modal-fecha-e" class="text-gray-800 text-sm">--/--/--</b>
+                    </div>
+                    <div class="bg-white p-2.5 rounded-xl border border-gray-100">
+                        <p class="text-gray-400 uppercase font-bold text-[9px] tracking-wider mb-0.5">Devolución</p>
+                        <b id="renta-modal-fecha-r" class="text-gray-800 text-sm">--/--/--</b>
+                    </div>
+                </div>
             </div>
 
-            <div id="lista-historial-cliente" class="overflow-y-auto flex-1 px-6 space-y-2 pb-4"></div>
-
-            <div class="p-4 border-t border-gray-100 space-y-2">
-                <button onclick="eliminarClienteJS()"
-                    class="w-full py-2.5 rounded-xl border border-red-100 bg-red-50 text-red-500 text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-transform">
-                    <span class="material-icons-round text-sm">person_remove</span> Eliminar cliente
-                </button>
-                <button onclick="document.getElementById('modal-cliente-historial').classList.add('hidden'); clienteEditing = null;"
-                    class="w-full py-3 text-gray-400 text-xs font-bold uppercase tracking-widest">
-                    Cerrar
-                </button>
+            <div class="mb-5">
+                <div class="flex items-center justify-between mb-1.5">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                        <span class="material-icons-round text-sm text-yellow-500">info</span>
+                        Ajustes / Notas
+                    </p>
+                    <button id="btn-editar-ajustes" onclick="toggleEditarAjustes()"
+                        class="text-[10px] font-bold text-pink-500 px-2 py-0.5 rounded-lg hover:bg-pink-50 transition-colors">
+                        Editar
+                    </button>
+                </div>
+                <div id="renta-modal-ajustes"
+                    class="w-full p-3 bg-yellow-50 border border-yellow-100 rounded-2xl text-xs text-yellow-800 italic leading-relaxed">
+                    Sin ajustes registrados.
+                </div>
+                <div id="ajustes-edit-section" class="hidden space-y-2">
+                    <textarea id="ajustes-textarea" rows="3"
+                        class="w-full p-3 bg-yellow-50 border border-yellow-300 rounded-2xl text-xs text-yellow-800 leading-relaxed resize-none focus:outline-none focus:border-yellow-500 transition-all"></textarea>
+                    <button onclick="guardarAjustesRenta()"
+                        class="w-full py-2.5 bg-yellow-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-transform flex items-center justify-center gap-1.5">
+                        <span class="material-icons-round text-sm">save</span>Guardar Ajustes
+                    </button>
+                </div>
             </div>
+
+            <div class="space-y-2.5">
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="btn-whatsapp-renta" onclick="enviarTicketWhatsApp()"
+                        class="w-full py-3 rounded-2xl bg-green-500 text-white text-sm font-bold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-transform">
+                        <span class="material-icons-round text-base">chat</span>
+                        Recordatorio
+                    </button>
+                    <button id="btn-recibo-renta" onclick="enviarReciboWhatsApp()"
+                        class="w-full py-3 rounded-2xl bg-blue-500 text-white text-sm font-bold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-transform hidden">
+                        <span class="material-icons-round text-base">receipt</span>
+                        Recibo
+                    </button>
+                </div>
+
+                <div id="zona-acciones-renta" class="space-y-2">
+                    <button id="btn-entregar" onclick="entregarVestidoJS()"
+                        class="w-full p-3.5 rounded-2xl bg-pink-600 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-sm active:scale-95 hidden">
+                        <span class="material-icons-round text-base">checkroom</span>
+                        Entregar Vestido al Cliente
+                    </button>
+                    <button id="btn-devolucion" onclick="recibirDevolucionJS()"
+                        class="w-full p-3.5 rounded-2xl bg-blue-600 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-sm active:scale-95 hidden">
+                        <span class="material-icons-round text-base">assignment_return</span>
+                        Recibir Devolución
+                    </button>
+                    <button id="btn-cancelar" onclick="cancelarRentaJS()"
+                        class="w-full p-3.5 rounded-2xl border border-red-200 bg-red-50 text-red-600 text-sm font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform hidden">
+                        <span class="material-icons-round text-base">cancel</span>
+                        Cancelar Renta
+                    </button>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="guardarEstadoRenta('Disponible')"
+                            class="p-3 rounded-2xl border border-gray-200 bg-white text-gray-700 text-xs font-bold flex flex-col items-center gap-1 active:scale-95">
+                            <span class="material-icons-round text-xl text-green-500">check_circle</span>
+                            Disponible
+                        </button>
+                        <button onclick="guardarEstadoRenta('Limpieza')"
+                            class="p-3 rounded-2xl border border-gray-200 bg-white text-gray-700 text-xs font-bold flex flex-col items-center gap-1 active:scale-95">
+                            <span class="material-icons-round text-xl text-yellow-500">local_laundry_service</span>
+                            Limpieza
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="cerrarModalRenta()"
+                class="w-full py-4 text-gray-400 text-xs font-bold uppercase tracking-widest mt-3">
+                Cerrar
+            </button>
         </div>
     </div>
+</div>
 
-    <!-- ===== BOTONES FLOTANTES ===== -->
-    <div class="fixed bottom-6 left-0 right-0 flex justify-between px-6 z-50 pointer-events-none">
-        <a href="nueva-renta.html"
-            class="pointer-events-auto flex items-center gap-2 bg-blue-600 text-white px-5 py-3.5 rounded-2xl shadow-lg shadow-blue-200 active:scale-90 transition-all font-bold text-sm">
-            <span class="material-icons-round">add_shopping_cart</span>
-            Nueva Renta
-        </a>
-        <a href="agregar.html"
-            class="pointer-events-auto flex items-center gap-2 bg-pink-600 text-white px-5 py-3.5 rounded-2xl shadow-lg shadow-pink-200 active:scale-90 transition-all font-bold text-sm">
-            <span class="material-icons-round">add</span>
-            Agregar
-        </a>
+<!-- ===== MODAL HISTORIAL CLIENTE ===== -->
+<div id="modal-cliente-historial" class="hidden fixed inset-0 bg-black/70 z-[70] flex items-end sm:items-center justify-center backdrop-blur-sm">
+    <div class="bg-white w-full sm:w-[420px] rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[88vh] flex flex-col">
+
+        <div class="flex justify-center pt-3 pb-1 sm:hidden">
+            <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
+        </div>
+
+        <div class="p-6 border-b border-gray-100">
+            <div class="flex items-center gap-4">
+                <div class="h-14 w-14 rounded-2xl bg-pink-50 flex items-center justify-center text-pink-600 font-bold text-2xl border border-pink-100 font-display"
+                    id="cliente-modal-avatar">A</div>
+                <div class="flex-1">
+                    <h2 class="font-display text-lg font-bold text-gray-900 leading-tight" id="cliente-modal-nombre">Nombre</h2>
+                    <p class="text-xs text-gray-400 font-mono mt-0.5" id="cliente-modal-id">ID</p>
+                    <a id="cliente-modal-whatsapp" href="#" target="_blank"
+                        class="inline-flex items-center gap-1.5 mt-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full text-xs font-bold border border-green-100">
+                        <span class="material-icons-round text-sm">chat</span> WhatsApp
+                    </a>
+                </div>
+                <div class="flex flex-col items-end gap-1">
+                    <span id="cliente-total-rentas"
+                        class="bg-pink-50 text-pink-600 px-3 py-1 rounded-full text-[10px] font-bold border border-pink-100">
+                        0 Rentas
+                    </span>
+                    <span id="cliente-credito-badge"
+                        class="hidden bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-[10px] font-bold border border-indigo-100">
+                        $0 crédito
+                    </span>
+                    <button onclick="toggleEditarCliente()" id="btn-editar-cliente"
+                        class="text-[10px] font-bold text-pink-500 px-2 py-0.5 rounded-lg hover:bg-pink-50 transition-colors mt-1">
+                        Editar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="cliente-edit-section" class="hidden px-6 py-4 border-b border-gray-100 space-y-3 bg-gray-50">
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Editar datos del cliente</p>
+            <div>
+                <label class="text-xs font-bold text-gray-600 ml-1">Nombre Completo</label>
+                <input type="text" id="cliente-edit-nombre"
+                    class="w-full p-3 mt-1 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
+            </div>
+            <div>
+                <label class="text-xs font-bold text-gray-600 ml-1">Teléfono (WhatsApp)</label>
+                <input type="tel" id="cliente-edit-tel"
+                    class="w-full p-3 mt-1 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-pink-400 transition-all">
+            </div>
+            <button onclick="guardarClienteJS()"
+                class="w-full py-2.5 bg-pink-600 text-white text-sm font-bold rounded-xl active:scale-95 transition-transform flex items-center justify-center gap-1.5">
+                <span class="material-icons-round text-sm">save</span> Guardar cambios
+            </button>
+        </div>
+
+        <div class="px-6 pt-4 pb-2">
+            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Historial de Rentas</p>
+        </div>
+
+        <div id="lista-historial-cliente" class="overflow-y-auto flex-1 px-6 space-y-2 pb-4"></div>
+
+        <div class="p-4 border-t border-gray-100 space-y-2">
+            <button onclick="eliminarClienteJS()"
+                class="w-full py-2.5 rounded-xl border border-red-100 bg-red-50 text-red-500 text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-transform">
+                <span class="material-icons-round text-sm">person_remove</span> Eliminar cliente
+            </button>
+            <button onclick="document.getElementById('modal-cliente-historial').classList.add('hidden'); clienteEditing = null;"
+                class="w-full py-3 text-gray-400 text-xs font-bold uppercase tracking-widest">
+                Cerrar
+            </button>
+        </div>
     </div>
+</div>
 
-    <script src="admin.js"></script>
+<script src="admin.js"></script>
 </body>
 </html>

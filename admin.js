@@ -57,28 +57,64 @@ async function cargarTodo() {
 
 function cambiarTab(tab) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll('nav button').forEach(el => {
-        el.classList.remove('active','border-pink-600','text-pink-600');
-        el.classList.add('text-gray-400','border-transparent');
+    document.querySelectorAll('.sidebar-nav-btn').forEach(el => {
+        el.classList.remove('active', 'text-pink-600', 'bg-pink-50');
+        el.classList.add('text-gray-400');
     });
     const seccion = document.getElementById('sec-' + tab);
     const boton   = document.getElementById('btn-tab-' + tab);
     if (seccion && boton) {
         seccion.classList.remove('hidden');
-        boton.classList.add('active','border-pink-600','text-pink-600');
-        boton.classList.remove('text-gray-400','border-transparent');
+        boton.classList.add('active', 'text-pink-600', 'bg-pink-50');
+        boton.classList.remove('text-gray-400');
         if (tab === 'clientes')   renderizarClientes();
         if (tab === 'rentas')     renderizarRentas(datosGlobales.rentas);
         if (tab === 'finanzas')   renderizarDashboard();
         if (tab === 'calendario') setTimeout(() => renderizarCalendario(), 150);
     }
+    // Cerrar sidebar en mobile al navegar
+    if (window.innerWidth < 1024) toggleSidebar(false);
+}
+
+function toggleSidebar(forceState) {
+    const sidebar  = document.getElementById('sidebar');
+    const overlay  = document.getElementById('sidebar-overlay');
+    const isOpen   = !sidebar.classList.contains('-translate-x-full');
+    const open     = forceState !== undefined ? forceState : !isOpen;
+    sidebar.classList.toggle('-translate-x-full', !open);
+    overlay.classList.toggle('hidden', !open);
 }
 
 let filtroActual      = '';
 let tipoActual        = '';
 let filtroTallaActual = '';
+let vistaInventario   = 'list';
 
-function filtrarTipo(tipo) { tipoActual = tipo; filtroTallaActual = ''; renderizarInventario(datosGlobales.inventario); }
+function setVista(v) {
+    vistaInventario = v;
+    const gridBtn = document.getElementById('vista-grid-btn');
+    const listBtn = document.getElementById('vista-list-btn');
+    if (gridBtn && listBtn) {
+        gridBtn.className = v === 'grid' ? 'p-2.5 bg-pink-50 transition-colors' : 'p-2.5 hover:bg-gray-50 transition-colors';
+        gridBtn.querySelector('span').className = v === 'grid' ? 'material-icons-round text-pink-600 text-xl' : 'material-icons-round text-gray-400 text-xl';
+        listBtn.className = v === 'list' ? 'p-2.5 bg-pink-50 transition-colors' : 'p-2.5 hover:bg-gray-50 transition-colors';
+        listBtn.querySelector('span').className = v === 'list' ? 'material-icons-round text-pink-600 text-xl' : 'material-icons-round text-gray-400 text-xl';
+    }
+    renderizarInventario(datosGlobales.inventario);
+}
+
+const CAT_BTN_BASE   = 'cat-btn px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:border-pink-300 transition-all active:scale-95';
+const CAT_BTN_ACTIVE = 'cat-btn px-4 py-2 rounded-xl bg-pink-600 text-white text-xs font-bold transition-all active:scale-95';
+
+function filtrarTipo(tipo) {
+    tipoActual = tipo;
+    filtroTallaActual = '';
+    document.querySelectorAll('.cat-btn').forEach(btn => {
+        btn.className = btn.dataset.cat === tipo ? CAT_BTN_ACTIVE : CAT_BTN_BASE;
+    });
+    renderizarInventario(datosGlobales.inventario);
+}
+
 function filtrarTalla(talla) { filtroTallaActual = talla; renderizarInventario(datosGlobales.inventario); }
 
 function renderizarFiltroTallas(lista) {
@@ -95,13 +131,13 @@ function renderizarFiltroTallas(lista) {
     if (!tallas.length) { container.innerHTML = ''; return; }
     container.innerHTML = '';
     const btnTodo = document.createElement('button');
-    btnTodo.className = 'whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-bold transition-all ' + (!filtroTallaActual ? 'bg-pink-600 text-white' : 'bg-white border border-gray-200 text-gray-500');
+    btnTodo.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 ' + (!filtroTallaActual ? 'bg-pink-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-pink-300');
     btnTodo.textContent = 'Todas';
     btnTodo.onclick = () => filtrarTalla('');
     container.appendChild(btnTodo);
     tallas.forEach(t => {
         const btn = document.createElement('button');
-        btn.className = 'whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-bold transition-all ' + (filtroTallaActual === t ? 'bg-pink-600 text-white' : 'bg-white border border-gray-200 text-gray-600');
+        btn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 ' + (filtroTallaActual === t ? 'bg-pink-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-pink-300');
         btn.textContent = t;
         btn.onclick = () => filtrarTalla(t);
         container.appendChild(btn);
@@ -111,46 +147,127 @@ function renderizarFiltroTallas(lista) {
 function renderizarInventario(lista) {
     const contenedor = document.getElementById('lista-admin');
     if (!contenedor) return;
-    const busqueda = (document.getElementById('buscador')?.value || '').toLowerCase();
+    const busqueda = (document.getElementById('buscador')?.value || '').toLowerCase().trim();
     const prefiltrada = lista.filter(i => {
-        const txt  = !busqueda || (i.nombre||'').toLowerCase().includes(busqueda) || (i.id_articulo||'').toLowerCase().includes(busqueda);
+        const txt  = !busqueda || (i.nombre||'').toLowerCase().includes(busqueda) || (i.id_articulo||'').toLowerCase().includes(busqueda) || (i.codigo||'').toLowerCase().includes(busqueda);
         const est  = !filtroActual || i.estado_actual === filtroActual;
         const tipo = !tipoActual   || (i.tipo || 'Vestido') === tipoActual;
         return txt && est && tipo;
     });
     renderizarFiltroTallas(prefiltrada);
-    const filtrada = prefiltrada.filter(i => !filtroTallaActual || i.talla === filtroTallaActual);
+    let filtrada = prefiltrada.filter(i => !filtroTallaActual || i.talla === filtroTallaActual);
+
+    // Ordenar
+    const orden = document.getElementById('orden-select')?.value || 'reciente';
+    if (orden === 'nombre')       filtrada = [...filtrada].sort((a,b) => (a.nombre||'').localeCompare(b.nombre||''));
+    else if (orden === 'precio_asc')  filtrada = [...filtrada].sort((a,b) => (a.precio_base||0) - (b.precio_base||0));
+    else if (orden === 'precio_desc') filtrada = [...filtrada].sort((a,b) => (b.precio_base||0) - (a.precio_base||0));
+
+    // Actualizar contador
+    const contador = document.getElementById('contador-vestidos');
+    if (contador) contador.textContent = filtrada.length + ' vestido' + (filtrada.length !== 1 ? 's' : '') + ' encontrados';
+
     if (!filtrada.length) {
+        contenedor.className = 'bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden';
         contenedor.innerHTML = '<p class="text-center text-gray-400 py-10 text-sm italic">No se encontraron artículos.</p>';
         return;
     }
-    contenedor.innerHTML = '';
-    filtrada.forEach(item => {
-        const cfg = { Disponible:{color:'bg-green-100 text-green-700'}, Rentado:{color:'bg-blue-100 text-blue-700'}, Limpieza:{color:'bg-yellow-100 text-yellow-700'} }[item.estado_actual] || {color:'bg-gray-100 text-gray-500'};
-        const fotoUrl = obtenerUrlFoto(item.foto, 'sm');
-        const card = document.createElement('div');
-        card.className = 'item-card bg-white rounded-2xl border border-gray-100 p-3 flex items-center gap-3 cursor-pointer active:scale-95 transition-all';
-        card.innerHTML = `<img src="${fotoUrl}" class="w-14 h-16 rounded-xl object-cover bg-gray-100 flex-shrink-0" onerror="this.src='https://placehold.co/60x72/f5f1eb/8a8a8e?text=Foto'">
-            <div class="flex-1 min-w-0">
-                <p class="font-bold text-gray-900 text-sm truncate">${item.nombre||'—'}</p>
-                <p class="text-[10px] text-gray-400 font-mono mt-0.5">${item.codigo||item.id_articulo}</p>
-                <div class="flex items-center gap-2 mt-1.5">
-                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${cfg.color}">${item.estado_actual}</span>
-                    <span class="text-[10px] text-gray-400">Talla: <b>${item.talla||'—'}</b></span>
-                    ${item.publicado ? '<span class="text-[10px] text-pink-500 font-bold">● Web</span>' : '<span class="text-[10px] text-gray-300">○ Oculto</span>'}
+
+    const estadoCfg = {
+        Disponible: { bg: 'bg-green-50',  text: 'text-green-700',  dot: 'bg-green-500' },
+        Rentado:    { bg: 'bg-blue-50',   text: 'text-blue-700',   dot: 'bg-blue-500'  },
+        Limpieza:   { bg: 'bg-yellow-50', text: 'text-yellow-700', dot: 'bg-yellow-500'},
+    };
+    const tipoIcon = { Vestido: 'checkroom', Zapato: 'shoe_heel', Bolsa: 'backpack', Accesorios: 'diamond' };
+
+    if (vistaInventario === 'grid') {
+        contenedor.className = 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 p-3';
+        contenedor.innerHTML = '';
+        filtrada.forEach(item => {
+            const cfg     = estadoCfg[item.estado_actual] || { bg:'bg-gray-50', text:'text-gray-500', dot:'bg-gray-400' };
+            const fotoUrl = obtenerUrlFoto(item.foto, 'sm');
+            const card    = document.createElement('div');
+            card.className = 'item-card bg-white rounded-2xl border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md transition-all active:scale-95';
+            card.innerHTML = `
+                <img src="${fotoUrl}" class="w-full h-40 object-cover bg-gray-100" onerror="this.src='https://placehold.co/200x160/f5f1eb/8a8a8e?text=Foto'">
+                <div class="p-3">
+                    <p class="font-bold text-gray-900 text-xs truncate">${item.nombre||'—'}</p>
+                    <p class="text-[10px] text-pink-500 font-mono mt-0.5 truncate">ID: ${item.codigo||item.id_articulo}</p>
+                    <div class="flex items-center justify-between mt-2">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 ${cfg.bg} ${cfg.text} text-[10px] font-bold rounded-full">
+                            <span class="w-1.5 h-1.5 ${cfg.dot} rounded-full"></span>${item.estado_actual}
+                        </span>
+                        <span class="text-pink-600 font-black text-sm">$${item.precio_base||0}</span>
+                    </div>
+                </div>`;
+            card.onclick = () => abrirModal(item);
+            contenedor.appendChild(card);
+        });
+    } else {
+        contenedor.className = 'bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden';
+        contenedor.innerHTML = '';
+        filtrada.forEach((item, idx) => {
+            const cfg     = estadoCfg[item.estado_actual] || { bg:'bg-gray-50', text:'text-gray-500', dot:'bg-gray-400' };
+            const fotoUrl = obtenerUrlFoto(item.foto, 'sm');
+            const icon    = tipoIcon[(item.tipo||'Vestido')] || 'checkroom';
+            const card    = document.createElement('div');
+            card.className = `item-card flex items-center gap-3 lg:gap-4 px-4 py-3.5 cursor-pointer transition-all ${idx > 0 ? 'border-t border-gray-100' : ''}`;
+            card.innerHTML = `
+                <img src="${fotoUrl}" class="w-12 h-14 rounded-xl object-cover bg-gray-100 flex-shrink-0" onerror="this.src='https://placehold.co/60x72/f5f1eb/8a8a8e?text=Foto'">
+                <div class="flex-1 min-w-0">
+                    <p class="font-bold text-gray-900 text-sm truncate">${item.nombre||'—'}</p>
+                    <p class="text-xs text-pink-500 font-mono mt-0.5">ID: ${item.codigo||item.id_articulo}</p>
                 </div>
-            </div>
-            <div class="text-right flex-shrink-0">
-                <p class="text-pink-600 font-black text-sm">$${item.precio_base||0}</p>
-                <span class="material-icons-round text-gray-300 text-xl mt-1">chevron_right</span>
-            </div>`;
-        card.onclick = () => abrirModal(item);
-        contenedor.appendChild(card);
-    });
+                <div class="hidden sm:flex items-center flex-shrink-0 w-14">
+                    <span class="px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-bold rounded-lg">${item.talla||'—'}</span>
+                </div>
+                <div class="hidden lg:flex items-center gap-1.5 flex-shrink-0 w-32">
+                    <span class="material-icons-round text-gray-400 text-base">${icon}</span>
+                    <div>
+                        <p class="text-xs font-medium text-gray-700">${item.tipo||'Vestido'}s</p>
+                        ${item.publicado ? '<p class="text-[10px] text-gray-400 flex items-center gap-0.5"><span class="material-icons-round" style="font-size:10px">language</span> Web</p>' : '<p class="text-[10px] text-gray-300">○ Oculto</p>'}
+                    </div>
+                </div>
+                <div class="hidden md:flex items-center flex-shrink-0 w-28">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 ${cfg.bg} ${cfg.text} text-xs font-bold rounded-full">
+                        <span class="w-1.5 h-1.5 ${cfg.dot} rounded-full flex-shrink-0"></span>${item.estado_actual}
+                    </span>
+                </div>
+                <div class="flex-shrink-0 w-16 text-right">
+                    <p class="text-pink-600 font-black text-base">$${item.precio_base||0}</p>
+                </div>
+                <button class="p-2 hover:bg-gray-100 rounded-xl transition-colors flex-shrink-0" onclick="event.stopPropagation()">
+                    <span class="material-icons-round text-gray-400 text-xl">more_vert</span>
+                </button>`;
+            card.onclick = () => abrirModal(item);
+            contenedor.appendChild(card);
+        });
+    }
 }
 
-document.getElementById('buscador')?.addEventListener('input', () => renderizarInventario(datosGlobales.inventario));
-function filtrarInventario(estado) { filtroActual = estado; renderizarInventario(datosGlobales.inventario); }
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('buscador')?.addEventListener('input', e => {
+        const bh = document.getElementById('buscador-header');
+        if (bh) bh.value = e.target.value;
+        renderizarInventario(datosGlobales.inventario);
+    });
+    document.getElementById('buscador-header')?.addEventListener('input', e => {
+        const b = document.getElementById('buscador');
+        if (b) b.value = e.target.value;
+        renderizarInventario(datosGlobales.inventario);
+    });
+});
+
+const ESTADO_BTN_BASE   = 'estado-btn px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5';
+const ESTADO_BTN_ACTIVE = 'estado-btn px-4 py-2 rounded-xl bg-pink-600 text-white text-xs font-bold transition-all active:scale-95';
+
+function filtrarInventario(estado) {
+    filtroActual = estado;
+    document.querySelectorAll('.estado-btn').forEach(btn => {
+        btn.className = btn.dataset.estado === estado ? ESTADO_BTN_ACTIVE : ESTADO_BTN_BASE;
+    });
+    renderizarInventario(datosGlobales.inventario);
+}
 
 function abrirModal(item) {
     itemEditing = item;
@@ -205,8 +322,8 @@ async function cambiarVisibilidadWeb(publicado) {
 
 function filtrarRentas(tipo) {
     filtroRentas = tipo;
-    document.getElementById('chip-rentas-activas').className  = `px-4 py-1.5 rounded-full text-[10px] font-bold transition-all ${tipo === 'activas'   ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-500'}`;
-    document.getElementById('chip-rentas-historial').className = `px-4 py-1.5 rounded-full text-[10px] font-bold transition-all ${tipo === 'historial' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-500'}`;
+    document.getElementById('chip-rentas-activas').className  = `px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${tipo === 'activas'   ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50'}`;
+    document.getElementById('chip-rentas-historial').className = `px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${tipo === 'historial' ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50'}`;
     renderizarRentas(datosGlobales.rentas);
 }
 
