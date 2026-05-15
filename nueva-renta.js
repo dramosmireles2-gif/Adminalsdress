@@ -290,9 +290,9 @@ document.getElementById('form-renta')?.addEventListener('submit', async (e) => {
         });
         if (rentaError) throw rentaError;
 
-        // 2. Marcar como Rentado solo si es vestido inventariado
+        // 2. Marcar como Apartado (reservado, pendiente de entrega física)
         if (!esExterno) {
-            await sb.from('inventario').update({ estado_actual: 'Rentado' }).eq('id_articulo', idArticulo);
+            await sb.from('inventario').update({ estado_actual: 'Apartado' }).eq('id_articulo', idArticulo);
         }
 
         // 3. Si se aplicó crédito, marcar entradas de crédito como usadas

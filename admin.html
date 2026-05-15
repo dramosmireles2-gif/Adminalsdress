@@ -160,10 +160,28 @@
         </div>
 
         <!-- Notificaciones -->
-        <button class="relative p-2.5 hover:bg-gray-100 rounded-xl transition-colors flex-shrink-0">
-            <span class="material-icons-round text-gray-500 text-xl">notifications</span>
-            <span class="absolute top-1.5 right-1.5 w-4 h-4 bg-pink-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">3</span>
-        </button>
+        <div class="relative flex-shrink-0">
+            <button id="btn-notificaciones" onclick="toggleNotificaciones()"
+                class="relative p-2.5 hover:bg-gray-100 rounded-xl transition-colors">
+                <span class="material-icons-round text-gray-500 text-xl">notifications</span>
+                <span id="badge-notificaciones"
+                    class="hidden absolute top-1.5 right-1.5 min-w-[16px] h-4 bg-pink-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none px-0.5">0</span>
+            </button>
+
+            <!-- Panel de alertas -->
+            <div id="panel-notificaciones"
+                class="hidden absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <p class="text-sm font-bold text-gray-800">Notificaciones</p>
+                    <span id="badge-panel" class="text-[10px] bg-pink-50 text-pink-600 px-2 py-0.5 rounded-full font-bold border border-pink-100"></span>
+                </div>
+                <div id="lista-notificaciones" class="max-h-80 overflow-y-auto"></div>
+                <div class="px-4 py-3 border-t border-gray-100 text-center">
+                    <button onclick="toggleNotificaciones()"
+                        class="text-xs text-gray-400 font-bold hover:text-gray-600 transition-colors">Cerrar</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Usuario -->
         <div class="flex items-center gap-2.5 cursor-pointer hover:bg-gray-50 rounded-xl px-3 py-2 transition-all flex-shrink-0">
@@ -258,6 +276,10 @@
                             <button onclick="filtrarInventario('Rentado')" data-estado="Rentado"
                                 class="estado-btn px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:border-blue-300 transition-all flex items-center gap-1.5 active:scale-95">
                                 <span class="w-2 h-2 bg-blue-500 rounded-full"></span> Rentados
+                            </button>
+                            <button onclick="filtrarInventario('Apartado')" data-estado="Apartado"
+                                class="estado-btn px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:border-orange-300 transition-all flex items-center gap-1.5 active:scale-95">
+                                <span class="w-2 h-2 bg-orange-500 rounded-full"></span> Apartados
                             </button>
                             <button onclick="filtrarInventario('Limpieza')" data-estado="Limpieza"
                                 class="estado-btn px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:border-yellow-300 transition-all flex items-center gap-1.5 active:scale-95">
