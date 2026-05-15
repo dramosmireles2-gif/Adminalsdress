@@ -42,6 +42,92 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!session) { window.location.href = 'index.html'; return; }
     await cargarTodo();
     renderizarInventario(datosGlobales.inventario);
+    calcularAlertas();
+});
+
+// =============================================
+// ALERTAS / NOTIFICACIONES
+// =============================================
+
+function calcularAlertas() {
+    const hoy    = new Date().toISOString().split('T')[0];
+    const dt     = new Date(); dt.setDate(dt.getDate() + 1);
+    const manana = dt.toISOString().split('T')[0];
+    const alertas = [];
+
+    datosGlobales.rentas.forEach(r => {
+        const cliente = datosGlobales.clientes.find(c => c.id_cliente === r.id_cliente);
+        const nombre  = cliente?.nombre_completo || r.id_cliente;
+        const vestido = nombreArticulo(r);
+
+        if (r.estatus_renta === 'Entregada') {
+            if (r.fecha_retorno && r.fecha_retorno < hoy) {
+                alertas.push({ icono: 'warning', color: 'text-red-500 bg-red-50', texto: 'Devolución vencida', sub: `${nombre} — ${vestido}`, fecha: r.fecha_retorno });
+            } else if (r.fecha_retorno === hoy) {
+                alertas.push({ icono: 'assignment_return', color: 'text-orange-500 bg-orange-50', texto: 'Devolución hoy', sub: `${nombre} — ${vestido}`, fecha: r.fecha_retorno });
+            }
+        }
+        if (r.estatus_renta === 'Activa' || r.estatus_renta === 'Apartada') {
+            if (r.fecha_entrega === hoy) {
+                alertas.push({ icono: 'checkroom', color: 'text-blue-500 bg-blue-50', texto: 'Entrega hoy', sub: `${nombre} — ${vestido}`, fecha: r.fecha_entrega });
+            } else if (r.fecha_entrega === manana) {
+                alertas.push({ icono: 'schedule', color: 'text-purple-500 bg-purple-50', texto: 'Entrega mañana', sub: `${nombre} — ${vestido}`, fecha: r.fecha_entrega });
+            }
+        }
+    });
+
+    window._alertas = alertas;
+    const badge = document.getElementById('badge-notificaciones');
+    if (badge) {
+        if (alertas.length > 0) {
+            badge.textContent = alertas.length > 9 ? '9+' : alertas.length;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+}
+
+function toggleNotificaciones() {
+    const panel = document.getElementById('panel-notificaciones');
+    if (!panel) return;
+    const abrir = panel.classList.contains('hidden');
+    if (abrir) {
+        const alertas = window._alertas || [];
+        const lista   = document.getElementById('lista-notificaciones');
+        const badgeP  = document.getElementById('badge-panel');
+        if (badgeP) badgeP.textContent = alertas.length + ' alerta' + (alertas.length !== 1 ? 's' : '');
+        if (lista) {
+            if (!alertas.length) {
+                lista.innerHTML = '<p class="text-center text-gray-400 text-sm py-8 px-4">¡Todo al día! Sin alertas pendientes. ✓</p>';
+            } else {
+                lista.innerHTML = '';
+                alertas.forEach(a => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-start gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-default';
+                    div.innerHTML = `
+                        <div class="w-8 h-8 ${a.color} rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span class="material-icons-round text-base">${a.icono}</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-bold text-gray-800">${a.texto}</p>
+                            <p class="text-[11px] text-gray-500 truncate mt-0.5">${a.sub}</p>
+                            <p class="text-[10px] text-gray-400 mt-0.5">${a.fecha}</p>
+                        </div>`;
+                    lista.appendChild(div);
+                });
+            }
+        }
+        panel.classList.remove('hidden');
+    } else {
+        panel.classList.add('hidden');
+    }
+}
+
+document.addEventListener('click', e => {
+    if (!e.target.closest('#btn-notificaciones') && !e.target.closest('#panel-notificaciones')) {
+        document.getElementById('panel-notificaciones')?.classList.add('hidden');
+    }
 });
 
 async function cargarTodo() {
@@ -174,9 +260,10 @@ function renderizarInventario(lista) {
     }
 
     const estadoCfg = {
-        Disponible: { bg: 'bg-green-50',  text: 'text-green-700',  dot: 'bg-green-500' },
-        Rentado:    { bg: 'bg-blue-50',   text: 'text-blue-700',   dot: 'bg-blue-500'  },
-        Limpieza:   { bg: 'bg-yellow-50', text: 'text-yellow-700', dot: 'bg-yellow-500'},
+        Disponible: { bg: 'bg-green-50',  text: 'text-green-700',  dot: 'bg-green-500'  },
+        Rentado:    { bg: 'bg-blue-50',   text: 'text-blue-700',   dot: 'bg-blue-500'   },
+        Limpieza:   { bg: 'bg-yellow-50', text: 'text-yellow-700', dot: 'bg-yellow-500' },
+        Apartado:   { bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500' },
     };
     const tipoIcon = { Vestido: 'checkroom', Zapato: 'shoe_heel', Bolsa: 'backpack', Accesorios: 'diamond' };
 
@@ -259,7 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 const ESTADO_BTN_BASE   = 'estado-btn px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5';
-const ESTADO_BTN_ACTIVE = 'estado-btn px-4 py-2 rounded-xl bg-pink-600 text-white text-xs font-bold transition-all active:scale-95';
+const ESTADO_BTN_ACTIVE = 'estado-btn px-4 py-2 rounded-xl bg-pink-600 text-white text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5';
 
 function filtrarInventario(estado) {
     filtroActual = estado;
@@ -527,6 +614,13 @@ async function entregarVestidoJS() {
     }).eq('id_renta', rentaEditing.id_renta);
 
     if (error) { Swal.fire('Error', 'No se pudo registrar la entrega.', 'error'); return; }
+
+    // Cambiar vestido de Apartado → Rentado al momento de entregar físicamente
+    if (rentaEditing.id_articulo) {
+        await sb.from('inventario').update({ estado_actual: 'Rentado' }).eq('id_articulo', rentaEditing.id_articulo);
+        const iI = datosGlobales.inventario.findIndex(i => i.id_articulo === rentaEditing.id_articulo);
+        if (iI !== -1) datosGlobales.inventario[iI].estado_actual = 'Rentado';
+    }
 
     const idx = datosGlobales.rentas.findIndex(r => r.id_renta === rentaEditing.id_renta);
     if (idx !== -1) {
