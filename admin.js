@@ -147,8 +147,13 @@ function cambiarTab(tab) {
         el.classList.remove('active', 'text-pink-600', 'bg-pink-50');
         el.classList.add('text-gray-400');
     });
-    const seccion = document.getElementById('sec-' + tab);
-    const boton   = document.getElementById('btn-tab-' + tab);
+    document.querySelectorAll('.bottom-nav-btn').forEach(el => {
+        el.classList.remove('active', 'text-pink-600');
+        el.classList.add('text-gray-400');
+    });
+    const seccion  = document.getElementById('sec-' + tab);
+    const boton    = document.getElementById('btn-tab-' + tab);
+    const bnavBtn  = document.getElementById('bnav-' + tab);
     if (seccion && boton) {
         seccion.classList.remove('hidden');
         boton.classList.add('active', 'text-pink-600', 'bg-pink-50');
@@ -158,7 +163,10 @@ function cambiarTab(tab) {
         if (tab === 'finanzas')   renderizarDashboard();
         if (tab === 'calendario') setTimeout(() => renderizarCalendario(), 150);
     }
-    // Cerrar sidebar en mobile al navegar
+    if (bnavBtn) {
+        bnavBtn.classList.add('active', 'text-pink-600');
+        bnavBtn.classList.remove('text-gray-400');
+    }
     if (window.innerWidth < 1024) toggleSidebar(false);
 }
 
