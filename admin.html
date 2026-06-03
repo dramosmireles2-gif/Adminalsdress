@@ -22,16 +22,22 @@
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
         /* FullCalendar */
-        .fc-toolbar-title { font-family: 'Playfair Display', serif !important; font-size: 1.1rem !important; color: #1c1c1e; }
-        .fc-button { background-color: #d63384 !important; border: none !important; font-size: 0.72rem !important; font-weight: 700; border-radius: 8px !important; font-family: 'Lato', sans-serif !important; }
+        .fc-toolbar-title { font-family: 'Playfair Display', serif !important; font-size: 1rem !important; color: #1c1c1e; }
+        .fc-button { background-color: #d63384 !important; border: none !important; font-size: 0.7rem !important; font-weight: 700; border-radius: 8px !important; font-family: 'Lato', sans-serif !important; padding: 0.35rem 0.6rem !important; }
         .fc-button:active { transform: scale(0.95); }
-        .fc-event { cursor: pointer; border: none !important; border-radius: 6px !important; font-size: 0.7rem !important; }
+        .fc-event { cursor: pointer; border: none !important; border-radius: 6px !important; font-size: 0.68rem !important; }
         .fc-day-today { background-color: #fff0f6 !important; }
+        .fc-toolbar.fc-header-toolbar { flex-wrap: wrap; gap: 8px; margin-bottom: 12px !important; }
 
         /* Sidebar nav active */
         .sidebar-nav-btn { transition: background-color 0.15s ease, color 0.15s ease; }
         .sidebar-nav-btn.active { background-color: #fdf2f8; color: #db2777 !important; }
         .sidebar-nav-btn.active .material-icons-round { color: #db2777; }
+
+        /* Bottom nav */
+        .bottom-nav-btn { transition: color 0.15s ease; -webkit-tap-highlight-color: transparent; }
+        .bottom-nav-btn.active { color: #d63384; }
+        #bottom-nav { padding-bottom: env(safe-area-inset-bottom, 0px); }
 
         /* Item cards */
         .item-card { transition: background-color 0.15s ease; }
@@ -46,6 +52,9 @@
 
         /* Sidebar transition */
         #sidebar { transition: transform 0.25s ease; }
+
+        /* Tap targets mínimos */
+        button, a { -webkit-tap-highlight-color: transparent; }
     </style>
 
     <link rel="manifest" href="./manifest.json">
@@ -141,21 +150,21 @@
 <div class="lg:ml-64 flex flex-col min-h-screen">
 
     <!-- ===== HEADER ===== -->
-    <header class="sticky top-0 bg-white border-b border-gray-100 z-30 px-4 lg:px-6 py-3.5 flex items-center gap-3">
+    <header class="sticky top-0 bg-white border-b border-gray-100 z-30 px-4 lg:px-6 py-3 flex items-center gap-3">
 
-        <!-- Hamburger (solo mobile) -->
+        <!-- Hamburger (solo mobile/tablet) -->
         <button onclick="toggleSidebar()"
-            class="lg:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors flex-shrink-0">
+            class="lg:hidden p-2.5 rounded-xl hover:bg-gray-100 transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center">
             <span class="material-icons-round text-gray-600 text-xl">menu</span>
         </button>
 
-        <!-- Buscador global -->
+        <!-- Buscador global (siempre visible) -->
         <div class="flex-1 relative max-w-xl">
             <span class="absolute inset-y-0 left-3.5 flex items-center text-gray-400 pointer-events-none">
                 <span class="material-icons-round text-xl">search</span>
             </span>
             <input type="text" id="buscador-header"
-                placeholder="Buscar vestido por nombre, ID o código..."
+                placeholder="Buscar vestido..."
                 class="w-full py-2.5 pl-11 pr-4 text-sm bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-pink-400 border border-gray-100 transition-all">
         </div>
 
@@ -170,7 +179,7 @@
 
             <!-- Panel de alertas -->
             <div id="panel-notificaciones"
-                class="hidden absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                class="hidden absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-1rem)] bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
                 <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                     <p class="text-sm font-bold text-gray-800">Notificaciones</p>
                     <span id="badge-panel" class="text-[10px] bg-pink-50 text-pink-600 px-2 py-0.5 rounded-full font-bold border border-pink-100"></span>
@@ -197,13 +206,13 @@
     </header>
 
     <!-- ===== CONTENIDO ===== -->
-    <main class="flex-1 p-4 lg:p-6 max-w-7xl w-full mx-auto">
+    <main class="flex-1 p-4 lg:p-6 pb-28 lg:pb-6 max-w-7xl w-full mx-auto">
 
         <!-- ===== VESTIDOS ===== -->
-        <section id="sec-inv" class="tab-content space-y-5">
+        <section id="sec-inv" class="tab-content space-y-4">
 
-            <!-- Encabezado de página -->
-            <div class="flex items-start justify-between gap-4 flex-wrap">
+            <!-- Encabezado (solo desktop) -->
+            <div class="hidden lg:flex items-start justify-between gap-4 flex-wrap">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Vestidos</h1>
                     <p class="text-sm text-gray-400 mt-0.5">Administra tu catálogo de vestidos</p>
@@ -211,21 +220,21 @@
                 <div class="flex items-center gap-2.5 flex-shrink-0">
                     <button class="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all shadow-sm active:scale-95">
                         <span class="material-icons-round text-base">upload</span>
-                        <span class="hidden sm:inline">Importar</span>
+                        Importar
                     </button>
                     <a href="agregar.html"
                         class="flex items-center gap-2 px-4 py-2.5 bg-pink-600 rounded-xl text-sm font-bold text-white hover:bg-pink-700 transition-all shadow-sm shadow-pink-200 active:scale-95">
                         <span class="material-icons-round text-base">add</span>
-                        <span class="hidden sm:inline">Agregar vestido</span>
+                        Agregar vestido
                     </a>
                 </div>
             </div>
 
-            <!-- Panel de filtros -->
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-5">
+            <!-- Panel de filtros (solo desktop) -->
+            <div class="hidden lg:block bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-5">
 
                 <!-- Fila 1: Buscar + Categoría -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
                         <p class="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">Buscar</p>
                         <div class="relative">
@@ -261,7 +270,7 @@
                 </div>
 
                 <!-- Fila 2: Estado + Tallas -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
                         <p class="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">Estado</p>
                         <div class="flex gap-2 flex-wrap">
@@ -295,35 +304,39 @@
             </div>
 
             <!-- Barra de resultados -->
-            <div class="flex items-center justify-between gap-3 flex-wrap">
-                <div class="flex items-center gap-2">
-                    <span class="material-icons-round text-gray-400 text-lg">inventory_2</span>
-                    <span id="contador-vestidos" class="text-sm font-bold text-gray-600">0 vestidos encontrados</span>
+            <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-1.5 min-w-0">
+                    <span class="material-icons-round text-gray-400 text-lg flex-shrink-0">inventory_2</span>
+                    <span id="contador-vestidos" class="text-xs sm:text-sm font-bold text-gray-600 truncate">0 vestidos</span>
                 </div>
-                <div class="flex items-center gap-2.5">
-                    <span class="text-sm text-gray-400 font-medium hidden sm:block">Vista</span>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <!-- Botón Filtros (solo móvil) -->
+                    <button onclick="abrirFiltrosSheet()" id="btn-filtros-mobile"
+                        class="lg:hidden relative flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 shadow-sm active:scale-95 transition-all">
+                        <span class="material-icons-round text-base text-gray-500">tune</span>
+                        Filtros
+                        <span id="badge-filtros" class="hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-pink-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none px-1">0</span>
+                    </button>
+                    <!-- Vista toggle -->
                     <div class="flex items-center bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                         <button id="vista-grid-btn" onclick="setVista('grid')"
-                            class="p-2.5 hover:bg-gray-50 transition-colors">
+                            class="p-2.5 hover:bg-gray-50 transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center">
                             <span class="material-icons-round text-gray-400 text-xl">grid_view</span>
                         </button>
                         <button id="vista-list-btn" onclick="setVista('list')"
-                            class="p-2.5 bg-pink-50 transition-colors">
+                            class="p-2.5 bg-pink-50 transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center">
                             <span class="material-icons-round text-pink-600 text-xl">view_list</span>
                         </button>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm text-gray-400 font-medium hidden sm:block">Ordenar por</span>
-                        <select id="orden-select"
-                            onchange="renderizarInventario(datosGlobales.inventario)"
-                            class="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-gray-600 cursor-pointer focus:outline-none focus:border-pink-400 shadow-sm appearance-none pr-8"
-                            style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%239ca3af%22><path fill-rule=%22evenodd%22 d=%22M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z%22/></svg>');background-repeat:no-repeat;background-position:right 8px center;background-size:16px">
-                            <option value="reciente" selected>Más recientes</option>
-                            <option value="nombre">Nombre A-Z</option>
-                            <option value="precio_asc">Precio ↑</option>
-                            <option value="precio_desc">Precio ↓</option>
-                        </select>
-                    </div>
+                    <select id="orden-select"
+                        onchange="renderizarInventario(datosGlobales.inventario)"
+                        class="bg-white border border-gray-200 rounded-xl px-2 sm:px-3 py-2 text-xs sm:text-sm font-bold text-gray-600 cursor-pointer focus:outline-none focus:border-pink-400 shadow-sm appearance-none pr-7"
+                        style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%239ca3af%22><path fill-rule=%22evenodd%22 d=%22M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z%22/></svg>');background-repeat:no-repeat;background-position:right 6px center;background-size:14px;max-width:130px">
+                        <option value="reciente" selected>Recientes</option>
+                        <option value="nombre">Nombre A-Z</option>
+                        <option value="precio_asc">Precio ↑</option>
+                        <option value="precio_desc">Precio ↓</option>
+                    </select>
                 </div>
             </div>
 
@@ -387,16 +400,16 @@
                 <p class="text-sm text-gray-400 mt-0.5">Resumen financiero del negocio</p>
             </div>
 
-            <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                <div class="kpi-card bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="kpi-card bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between sm:block">
                     <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Ingresos Renta</p>
-                    <h3 class="text-2xl font-black text-gray-900 mt-1 font-display" id="kpi-ingresos">$0</h3>
+                    <h3 class="text-2xl font-black text-gray-900 sm:mt-1 font-display" id="kpi-ingresos">$0</h3>
                 </div>
-                <div class="kpi-card deuda bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <div class="kpi-card deuda bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between sm:block">
                     <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Por Cobrar</p>
-                    <h3 class="text-2xl font-black text-red-500 mt-1 font-display" id="kpi-deuda">$0</h3>
+                    <h3 class="text-2xl font-black text-red-500 sm:mt-1 font-display" id="kpi-deuda">$0</h3>
                 </div>
-                <div class="kpi-card bg-white p-5 rounded-2xl shadow-sm border border-gray-100 col-span-2 lg:col-span-1" style="border-left-color:#7c3aed">
+                <div class="kpi-card bg-white p-5 rounded-2xl shadow-sm border border-gray-100" style="border-left-color:#7c3aed">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Ventas</p>
@@ -407,7 +420,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Ingresos por Mes</p>
                     <canvas id="chart-mensual" height="200"></canvas>
@@ -626,7 +639,7 @@
                     <span class="text-[10px] font-bold text-red-400 uppercase">Saldo pendiente</span>
                     <span id="renta-edit-saldo-preview" class="font-black text-red-500 text-sm">$0</span>
                 </div>
-                <div class="grid grid-cols-3 gap-2">
+                <div class="grid gap-2" style="grid-template-columns:repeat(3,1fr)">
                     <div>
                         <label class="text-[10px] font-bold text-gray-500 ml-1">Evento</label>
                         <input type="date" id="renta-edit-fecha-evento"
@@ -817,6 +830,147 @@
         </div>
     </div>
 </div>
+
+<!-- ===== FAB AGREGAR VESTIDO (solo móvil, tab inv) ===== -->
+<!-- Empieza oculto; cambiarTab('inv') lo muestra con flex en móvil -->
+<a id="fab-agregar" href="agregar.html"
+    class="hidden fixed right-4 z-40 w-14 h-14 bg-pink-600 rounded-full items-center justify-center shadow-xl shadow-pink-300 active:scale-95 transition-transform border-4 border-[#f8f7f5]"
+    style="bottom: 5.5rem">
+    <span class="material-icons-round text-white text-2xl">add</span>
+</a>
+
+<!-- ===== FILTROS SHEET OVERLAY ===== -->
+<div id="filtros-sheet-overlay"
+    class="hidden fixed inset-0 bg-black/50 z-[55] lg:hidden"
+    onclick="cerrarFiltrosSheet()"></div>
+
+<!-- ===== FILTROS BOTTOM SHEET ===== -->
+<div id="filtros-sheet"
+    class="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-[56] lg:hidden max-h-[80vh] flex flex-col translate-y-full"
+    style="transition:transform 0.3s cubic-bezier(0.4,0,0.2,1); padding-bottom:env(safe-area-inset-bottom,0px)">
+
+    <!-- Drag handle -->
+    <div class="flex justify-center pt-3 pb-1 flex-shrink-0">
+        <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
+    </div>
+
+    <!-- Header del sheet -->
+    <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+        <h3 class="font-bold text-gray-900 text-base">Filtros</h3>
+        <button onclick="cerrarFiltrosSheet()"
+            class="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 active:scale-95 transition-transform">
+            <span class="material-icons-round text-gray-500 text-xl">close</span>
+        </button>
+    </div>
+
+    <!-- Contenido scrollable -->
+    <div class="overflow-y-auto flex-1 p-5 space-y-6 no-scrollbar">
+
+        <!-- Categoría -->
+        <div>
+            <p class="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wide">Categoría</p>
+            <div class="flex gap-2 flex-wrap">
+                <button onclick="filtrarTipo('')" data-cat=""
+                    class="cat-btn px-4 py-2.5 rounded-xl bg-pink-600 text-white text-xs font-bold transition-all active:scale-95">
+                    Todas
+                </button>
+                <button onclick="filtrarTipo('Vestido')" data-cat="Vestido"
+                    class="cat-btn px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:border-pink-300 transition-all flex items-center gap-1.5 active:scale-95">
+                    <span class="material-icons-round text-sm">checkroom</span> Vestidos
+                </button>
+                <button onclick="filtrarTipo('Zapato')" data-cat="Zapato"
+                    class="cat-btn px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:border-pink-300 transition-all active:scale-95">
+                    👠 Zapatos
+                </button>
+                <button onclick="filtrarTipo('Bolsa')" data-cat="Bolsa"
+                    class="cat-btn px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:border-pink-300 transition-all active:scale-95">
+                    👜 Bolsas
+                </button>
+            </div>
+        </div>
+
+        <!-- Estado -->
+        <div>
+            <p class="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wide">Estado</p>
+            <div class="flex gap-2 flex-wrap">
+                <button onclick="filtrarInventario('')" data-estado=""
+                    class="estado-btn px-4 py-2.5 rounded-xl bg-pink-600 text-white text-xs font-bold transition-all active:scale-95">
+                    Todos
+                </button>
+                <button onclick="filtrarInventario('Disponible')" data-estado="Disponible"
+                    class="estado-btn px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:border-green-300 transition-all flex items-center gap-1.5 active:scale-95">
+                    <span class="w-2 h-2 bg-green-500 rounded-full"></span> Disponibles
+                </button>
+                <button onclick="filtrarInventario('Rentado')" data-estado="Rentado"
+                    class="estado-btn px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:border-blue-300 transition-all flex items-center gap-1.5 active:scale-95">
+                    <span class="w-2 h-2 bg-blue-500 rounded-full"></span> Rentados
+                </button>
+                <button onclick="filtrarInventario('Apartado')" data-estado="Apartado"
+                    class="estado-btn px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:border-orange-300 transition-all flex items-center gap-1.5 active:scale-95">
+                    <span class="w-2 h-2 bg-orange-500 rounded-full"></span> Apartados
+                </button>
+                <button onclick="filtrarInventario('Limpieza')" data-estado="Limpieza"
+                    class="estado-btn px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:border-yellow-300 transition-all flex items-center gap-1.5 active:scale-95">
+                    <span class="w-2 h-2 bg-yellow-500 rounded-full"></span> Limpieza
+                </button>
+            </div>
+        </div>
+
+        <!-- Tallas -->
+        <div>
+            <p class="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wide">Tallas</p>
+            <div id="filtro-tallas-sheet" class="flex gap-1.5 flex-wrap min-h-[32px]"></div>
+        </div>
+    </div>
+
+    <!-- Botones de acción -->
+    <div class="p-4 border-t border-gray-100 flex gap-3 flex-shrink-0">
+        <button onclick="limpiarFiltrosSheet()"
+            class="flex-1 py-3 rounded-2xl border border-gray-200 text-gray-600 text-sm font-bold active:scale-95 transition-transform flex items-center justify-center gap-1.5">
+            <span class="material-icons-round text-base">clear_all</span>
+            Limpiar
+        </button>
+        <button onclick="cerrarFiltrosSheet()"
+            class="flex-[2] py-3 rounded-2xl bg-pink-600 text-white text-sm font-bold active:scale-95 transition-transform shadow-sm shadow-pink-200 flex items-center justify-center gap-2">
+            <span class="material-icons-round text-base">check</span>
+            Ver resultados
+        </button>
+    </div>
+</div>
+
+<!-- ===== BOTTOM NAV (solo mobile/tablet) ===== -->
+<nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30 lg:hidden">
+    <div class="flex items-end">
+        <button onclick="cambiarTab('inv')" id="bnav-inv"
+            class="bottom-nav-btn active flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-3 text-pink-600 min-w-0">
+            <span class="material-icons-round text-2xl">checkroom</span>
+            <span class="text-[9px] font-bold leading-none">Vestidos</span>
+        </button>
+        <button onclick="cambiarTab('rentas')" id="bnav-rentas"
+            class="bottom-nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-3 text-gray-400 min-w-0">
+            <span class="material-icons-round text-2xl">shopping_bag</span>
+            <span class="text-[9px] font-bold leading-none">Rentas</span>
+        </button>
+        <!-- CTA central -->
+        <div class="flex-1 flex flex-col items-center justify-end min-w-0 relative pb-3">
+            <a href="nueva-renta.html"
+                class="absolute -top-7 w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center shadow-xl shadow-blue-300 border-4 border-[#f8f7f5] active:scale-95 transition-transform">
+                <span class="material-icons-round text-white text-2xl">add</span>
+            </a>
+            <span class="text-[9px] font-bold text-gray-400 leading-none mt-1 pt-8">Nueva</span>
+        </div>
+        <button onclick="cambiarTab('finanzas')" id="bnav-finanzas"
+            class="bottom-nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-3 text-gray-400 min-w-0">
+            <span class="material-icons-round text-2xl">payments</span>
+            <span class="text-[9px] font-bold leading-none">Finanzas</span>
+        </button>
+        <button onclick="cambiarTab('clientes')" id="bnav-clientes"
+            class="bottom-nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-3 text-gray-400 min-w-0">
+            <span class="material-icons-round text-2xl">people</span>
+            <span class="text-[9px] font-bold leading-none">Clientes</span>
+        </button>
+    </div>
+</nav>
 
 <script src="admin.js"></script>
 </body>
