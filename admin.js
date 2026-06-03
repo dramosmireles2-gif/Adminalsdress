@@ -43,6 +43,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     await cargarTodo();
     renderizarInventario(datosGlobales.inventario);
     calcularAlertas();
+    // Mostrar FAB en tab inicial (inv) para móvil
+    const fab = document.getElementById('fab-agregar');
+    if (fab && window.innerWidth < 1024) fab.classList.replace('hidden', 'flex');
 });
 
 // =============================================
@@ -167,6 +170,12 @@ function cambiarTab(tab) {
         bnavBtn.classList.add('active', 'text-pink-600');
         bnavBtn.classList.remove('text-gray-400');
     }
+    // FAB agregar vestido: solo visible en tab inv (móvil)
+    const fab = document.getElementById('fab-agregar');
+    if (fab) {
+        if (tab === 'inv') fab.classList.replace('hidden', 'flex');
+        else fab.classList.replace('flex', 'hidden');
+    }
     if (window.innerWidth < 1024) toggleSidebar(false);
 }
 
@@ -206,14 +215,17 @@ function filtrarTipo(tipo) {
     document.querySelectorAll('.cat-btn').forEach(btn => {
         btn.className = btn.dataset.cat === tipo ? CAT_BTN_ACTIVE : CAT_BTN_BASE;
     });
+    actualizarBadgeFiltros();
     renderizarInventario(datosGlobales.inventario);
 }
 
-function filtrarTalla(talla) { filtroTallaActual = talla; renderizarInventario(datosGlobales.inventario); }
+function filtrarTalla(talla) {
+    filtroTallaActual = talla;
+    actualizarBadgeFiltros();
+    renderizarInventario(datosGlobales.inventario);
+}
 
 function renderizarFiltroTallas(lista) {
-    const container = document.getElementById('filtro-tallas-container');
-    if (!container) return;
     const tallas = [...new Set(lista.map(i => i.talla).filter(t => t && t !== 'UNI'))].sort((a, b) => {
         const order = ['2XS','XS','S','M','L','XL','2XL','3XL','4XL'];
         const ia = order.indexOf(a), ib = order.indexOf(b);
@@ -222,20 +234,68 @@ function renderizarFiltroTallas(lista) {
         if (ib !== -1) return 1;
         return parseFloat(a) - parseFloat(b);
     });
-    if (!tallas.length) { container.innerHTML = ''; return; }
-    container.innerHTML = '';
-    const btnTodo = document.createElement('button');
-    btnTodo.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 ' + (!filtroTallaActual ? 'bg-pink-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-pink-300');
-    btnTodo.textContent = 'Todas';
-    btnTodo.onclick = () => filtrarTalla('');
-    container.appendChild(btnTodo);
-    tallas.forEach(t => {
-        const btn = document.createElement('button');
-        btn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 ' + (filtroTallaActual === t ? 'bg-pink-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-pink-300');
-        btn.textContent = t;
-        btn.onclick = () => filtrarTalla(t);
-        container.appendChild(btn);
+    const targets = [
+        document.getElementById('filtro-tallas-container'),
+        document.getElementById('filtro-tallas-sheet')
+    ].filter(Boolean);
+    targets.forEach(container => {
+        container.innerHTML = '';
+        if (!tallas.length) return;
+        const btnTodo = document.createElement('button');
+        btnTodo.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 ' + (!filtroTallaActual ? 'bg-pink-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-pink-300');
+        btnTodo.textContent = 'Todas';
+        btnTodo.onclick = () => filtrarTalla('');
+        container.appendChild(btnTodo);
+        tallas.forEach(t => {
+            const btn = document.createElement('button');
+            btn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 ' + (filtroTallaActual === t ? 'bg-pink-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-pink-300');
+            btn.textContent = t;
+            btn.onclick = () => filtrarTalla(t);
+            container.appendChild(btn);
+        });
     });
+}
+
+function actualizarBadgeFiltros() {
+    const count = (tipoActual ? 1 : 0) + (filtroActual ? 1 : 0) + (filtroTallaActual ? 1 : 0);
+    const badge = document.getElementById('badge-filtros');
+    const btn   = document.getElementById('btn-filtros-mobile');
+    if (badge) {
+        if (count > 0) {
+            badge.textContent = count;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+    if (btn) {
+        if (count > 0) btn.classList.add('border-pink-400', 'text-pink-600', 'bg-pink-50');
+        else btn.classList.remove('border-pink-400', 'text-pink-600', 'bg-pink-50');
+    }
+}
+
+function abrirFiltrosSheet() {
+    const overlay = document.getElementById('filtros-sheet-overlay');
+    const sheet   = document.getElementById('filtros-sheet');
+    if (!overlay || !sheet) return;
+    overlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => sheet.classList.remove('translate-y-full'));
+}
+
+function cerrarFiltrosSheet() {
+    const overlay = document.getElementById('filtros-sheet-overlay');
+    const sheet   = document.getElementById('filtros-sheet');
+    if (!overlay || !sheet) return;
+    sheet.classList.add('translate-y-full');
+    setTimeout(() => overlay.classList.add('hidden'), 300);
+    document.body.style.overflow = '';
+}
+
+function limpiarFiltrosSheet() {
+    filtrarTipo('');
+    filtrarInventario('');
+    filtrarTalla('');
 }
 
 function renderizarInventario(lista) {
@@ -361,6 +421,7 @@ function filtrarInventario(estado) {
     document.querySelectorAll('.estado-btn').forEach(btn => {
         btn.className = btn.dataset.estado === estado ? ESTADO_BTN_ACTIVE : ESTADO_BTN_BASE;
     });
+    actualizarBadgeFiltros();
     renderizarInventario(datosGlobales.inventario);
 }
 
