@@ -496,6 +496,21 @@
                         <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500"></div>
                     </label>
                 </div>
+                <div class="flex items-center justify-between p-3.5 bg-amber-50 rounded-2xl border border-amber-100">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                            <span class="material-icons-round text-amber-500 text-lg">star</span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-700">Destacado en catálogo</p>
+                            <p class="text-[10px] text-gray-400">Aparece en la vista inicial pública</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="toggle-destacado" class="sr-only peer" onchange="cambiarDestacado(this.checked)">
+                        <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-400"></div>
+                    </label>
+                </div>
                 <div class="grid grid-cols-1 gap-2">
                     <button onclick="guardarEstado('Disponible')" class="p-3.5 rounded-2xl border border-green-100 bg-green-50 text-green-700 font-bold flex items-center gap-3 active:scale-95 transition-transform text-sm">
                         <span class="material-icons-round text-green-500">check_circle</span>Marcar como Disponible
@@ -832,10 +847,9 @@
 </div>
 
 <!-- ===== FAB AGREGAR VESTIDO (solo móvil, tab inv) ===== -->
-<!-- Empieza oculto; cambiarTab('inv') lo muestra con flex en móvil -->
 <a id="fab-agregar" href="agregar.html"
-    class="hidden fixed right-4 z-40 w-14 h-14 bg-pink-600 rounded-full items-center justify-center shadow-xl shadow-pink-300 active:scale-95 transition-transform border-4 border-[#f8f7f5]"
-    style="bottom: 5.5rem">
+    class="fixed right-4 z-40 w-14 h-14 bg-pink-600 rounded-full items-center justify-center shadow-xl shadow-pink-300 active:scale-95 transition-transform border-4 border-[#f8f7f5]"
+    style="bottom:5.5rem; display:none">
     <span class="material-icons-round text-white text-2xl">add</span>
 </a>
 

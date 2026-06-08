@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     calcularAlertas();
     // Mostrar FAB en tab inicial (inv) para móvil
     const fab = document.getElementById('fab-agregar');
-    if (fab && window.innerWidth < 1024) fab.classList.replace('hidden', 'flex');
+    if (fab && window.innerWidth < 1024) fab.style.display = 'flex';
 });
 
 // =============================================
@@ -170,12 +170,9 @@ function cambiarTab(tab) {
         bnavBtn.classList.add('active', 'text-pink-600');
         bnavBtn.classList.remove('text-gray-400');
     }
-    // FAB agregar vestido: solo visible en tab inv (móvil)
+    // FAB agregar vestido: solo visible en tab inv, solo en móvil
     const fab = document.getElementById('fab-agregar');
-    if (fab) {
-        if (tab === 'inv') fab.classList.replace('hidden', 'flex');
-        else fab.classList.replace('flex', 'hidden');
-    }
+    if (fab) fab.style.display = (tab === 'inv' && window.innerWidth < 1024) ? 'flex' : 'none';
     if (window.innerWidth < 1024) toggleSidebar(false);
 }
 
@@ -280,7 +277,8 @@ function abrirFiltrosSheet() {
     if (!overlay || !sheet) return;
     overlay.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
-    requestAnimationFrame(() => sheet.classList.remove('translate-y-full'));
+    // doble rAF para garantizar que el navegador registra el translate-y-full antes de animarlo
+    requestAnimationFrame(() => requestAnimationFrame(() => sheet.classList.remove('translate-y-full')));
 }
 
 function cerrarFiltrosSheet() {
@@ -431,6 +429,8 @@ function abrirModal(item) {
     document.getElementById('modal-subtitulo').textContent = item.id_articulo + ' · Talla ' + item.talla;
     const toggle = document.getElementById('toggle-publicado');
     if (toggle) toggle.checked = !!item.publicado;
+    const toggleDest = document.getElementById('toggle-destacado');
+    if (toggleDest) toggleDest.checked = !!item.destacado;
 
     // Precargar campos de edición
     document.getElementById('edit-nombre').value        = item.nombre || '';
@@ -474,6 +474,17 @@ async function cambiarVisibilidadWeb(publicado) {
         itemEditing.publicado = publicado;
     }
     renderizarInventario(datosGlobales.inventario);
+}
+async function cambiarDestacado(destacado) {
+    if (!itemEditing) return;
+    const idArticulo = itemEditing.id_articulo;
+    const { error } = await sb.from('inventario').update({ destacado }).eq('id_articulo', idArticulo);
+    if (error) { Swal.fire('Error','No se pudo actualizar destacado.','error'); return; }
+    const idx = datosGlobales.inventario.findIndex(i => i.id_articulo === idArticulo);
+    if (idx !== -1) {
+        datosGlobales.inventario[idx].destacado = destacado;
+        itemEditing.destacado = destacado;
+    }
 }
 
 function filtrarRentas(tipo) {
