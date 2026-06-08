@@ -429,6 +429,8 @@ function abrirModal(item) {
     document.getElementById('modal-subtitulo').textContent = item.id_articulo + ' · Talla ' + item.talla;
     const toggle = document.getElementById('toggle-publicado');
     if (toggle) toggle.checked = !!item.publicado;
+    const toggleDest = document.getElementById('toggle-destacado');
+    if (toggleDest) toggleDest.checked = !!item.destacado;
 
     // Precargar campos de edición
     document.getElementById('edit-nombre').value        = item.nombre || '';
@@ -436,7 +438,6 @@ function abrirModal(item) {
     document.getElementById('edit-color').value         = item.color || '';
     document.getElementById('edit-precio-venta').value  = item.precio_venta || '';
     document.getElementById('edit-tipo').value          = item.tipo || 'Vestido';
-    document.getElementById('edit-destacado').checked   = !!item.destacado;
     actualizarTallaEdicion();
     document.getElementById('edit-talla').value         = item.talla || '';
 
@@ -473,6 +474,17 @@ async function cambiarVisibilidadWeb(publicado) {
         itemEditing.publicado = publicado;
     }
     renderizarInventario(datosGlobales.inventario);
+}
+async function cambiarDestacado(destacado) {
+    if (!itemEditing) return;
+    const idArticulo = itemEditing.id_articulo;
+    const { error } = await sb.from('inventario').update({ destacado }).eq('id_articulo', idArticulo);
+    if (error) { Swal.fire('Error','No se pudo actualizar destacado.','error'); return; }
+    const idx = datosGlobales.inventario.findIndex(i => i.id_articulo === idArticulo);
+    if (idx !== -1) {
+        datosGlobales.inventario[idx].destacado = destacado;
+        itemEditing.destacado = destacado;
+    }
 }
 
 function filtrarRentas(tipo) {
@@ -1146,14 +1158,13 @@ async function guardarEdicion() {
     const color        = document.getElementById('edit-color').value.trim();
     const tipo         = document.getElementById('edit-tipo').value;
     const precio_venta = parseFloat(document.getElementById('edit-precio-venta').value) || null;
-    const destacado    = document.getElementById('edit-destacado').checked;
 
     if (!nombre) return Swal.fire('Falta el nombre', 'El nombre no puede estar vacío.', 'warning');
 
     Swal.fire({ title: 'Guardando...', didOpen: () => Swal.showLoading() });
 
     const { error } = await sb.from('inventario').update({
-        nombre, precio_base: precio, talla, color, tipo, precio_venta, destacado
+        nombre, precio_base: precio, talla, color, tipo, precio_venta
     }).eq('id_articulo', item.id_articulo);
 
     if (error) { Swal.fire('Error', 'No se pudo guardar.', 'error'); return; }
@@ -1166,7 +1177,6 @@ async function guardarEdicion() {
         datosGlobales.inventario[idx].color        = color;
         datosGlobales.inventario[idx].tipo         = tipo;
         datosGlobales.inventario[idx].precio_venta = precio_venta;
-        datosGlobales.inventario[idx].destacado    = destacado;
     }
 
     cerrarModal();
