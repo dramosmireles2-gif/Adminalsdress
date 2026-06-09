@@ -410,27 +410,64 @@
         <section id="sec-finanzas" class="tab-content hidden space-y-5">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">Finanzas</h1>
-                <p class="text-sm text-gray-400 mt-0.5">Resumen financiero del negocio</p>
+                <div class="flex gap-2 mt-3 flex-wrap">
+                    <button onclick="setFiltroFinanzas('mes')" data-fin="mes"
+                        class="fin-chip px-3 py-1.5 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-600 transition-all active:scale-95">
+                        Este mes
+                    </button>
+                    <button onclick="setFiltroFinanzas('anio')" data-fin="anio"
+                        class="fin-chip px-3 py-1.5 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-600 transition-all active:scale-95">
+                        Este año
+                    </button>
+                    <button onclick="setFiltroFinanzas('todo')" data-fin="todo"
+                        class="fin-chip px-3 py-1.5 rounded-xl text-xs font-bold border-2 border-pink-500 bg-pink-500 text-white transition-all active:scale-95">
+                        Todo el tiempo
+                    </button>
+                </div>
+                <p id="fin-periodo-label" class="text-[11px] text-gray-400 mt-2"></p>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div class="kpi-card bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between sm:block">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="kpi-card bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                     <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Ingresos Renta</p>
-                    <h3 class="text-2xl font-black text-gray-900 sm:mt-1 font-display" id="kpi-ingresos">$0</h3>
-                </div>
-                <div class="kpi-card deuda bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between sm:block">
-                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Por Cobrar</p>
-                    <h3 class="text-2xl font-black text-red-500 sm:mt-1 font-display" id="kpi-deuda">$0</h3>
-                </div>
-                <div class="kpi-card bg-white p-5 rounded-2xl shadow-sm border border-gray-100" style="border-left-color:#7c3aed">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Ventas</p>
-                            <h3 class="text-2xl font-black text-purple-600 mt-1 font-display" id="kpi-ventas">$0</h3>
-                        </div>
-                        <span id="kpi-vendidos" class="text-xs bg-purple-50 text-purple-600 px-3 py-1.5 rounded-full font-bold border border-purple-100">0 vendidos</span>
+                    <h3 class="text-xl font-black text-gray-900 mt-1 font-display" id="kpi-ingresos">$0</h3>
+                    <div id="kpi-ingresos-delta" class="hidden mt-1.5 items-center gap-1">
+                        <span class="material-icons-round text-sm" id="kpi-ingresos-delta-icon"></span>
+                        <span class="text-[11px] font-bold" id="kpi-ingresos-delta-text"></span>
                     </div>
                 </div>
+                <div class="kpi-card deuda bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Por Cobrar</p>
+                    <h3 class="text-xl font-black text-red-500 mt-1 font-display" id="kpi-deuda">$0</h3>
+                </div>
+                <div class="kpi-card bg-white p-4 rounded-2xl shadow-sm border border-gray-100" style="border-left-color:#7c3aed">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Ventas</p>
+                    <h3 class="text-xl font-black text-purple-600 mt-1 font-display" id="kpi-ventas">$0</h3>
+                    <span id="kpi-vendidos" class="text-[10px] bg-purple-50 text-purple-500 px-2 py-0.5 rounded-full font-bold border border-purple-100 mt-1 inline-block">0 vendidos</span>
+                </div>
+                <div class="kpi-card bg-white p-4 rounded-2xl shadow-sm border border-gray-100" style="border-left-color:#f59e0b">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Top Vestido</p>
+                    <p class="text-sm font-black text-amber-600 mt-1 leading-tight line-clamp-2" id="kpi-top-vestido">—</p>
+                    <p class="text-[10px] text-gray-400 mt-0.5" id="kpi-top-veces">— rentas</p>
+                </div>
+            </div>
+
+            <!-- Comparativa mensual (siempre visible) -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Comparativa mensual</p>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-pink-50 rounded-xl p-3 border border-pink-100">
+                        <p class="text-[10px] text-pink-400 font-bold uppercase tracking-wider" id="label-mes-actual">Este mes</p>
+                        <p class="text-xl font-black text-pink-700 mt-1 font-display" id="kpi-mes-actual">$0</p>
+                        <p class="text-[10px] text-pink-400 mt-0.5" id="kpi-mes-actual-rentas">0 rentas</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider" id="label-mes-anterior">Mes anterior</p>
+                        <p class="text-xl font-black text-gray-700 mt-1 font-display" id="kpi-mes-anterior">$0</p>
+                        <p class="text-[10px] text-gray-400 mt-0.5" id="kpi-mes-anterior-rentas">0 rentas</p>
+                    </div>
+                </div>
+                <div id="kpi-variacion-row" class="hidden mt-3 py-2 px-3 rounded-xl text-center text-xs font-bold"></div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">

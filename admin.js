@@ -8,6 +8,7 @@ let rentaEditing   = null;
 let clienteEditing = null;
 let calendarInst   = null;
 let filtroRentas   = 'activas';
+let filtroFinanzas = 'todo';
 let extraFotoArchivos = {};
 
 function comprimirImagen(file, maxW = 1200, maxH = 1200, quality = 0.82) {
@@ -1312,22 +1313,128 @@ function renderizarCalendario() {
     calendarInst.render();
 }
 
+function setFiltroFinanzas(val) {
+    filtroFinanzas = val;
+    document.querySelectorAll('.fin-chip').forEach(btn => {
+        const activo = btn.dataset.fin === val;
+        btn.classList.toggle('bg-pink-500', activo);
+        btn.classList.toggle('text-white', activo);
+        btn.classList.toggle('border-pink-500', activo);
+        btn.classList.toggle('border-2', activo);
+        btn.classList.toggle('bg-white', !activo);
+        btn.classList.toggle('text-gray-600', !activo);
+        btn.classList.toggle('border-gray-200', !activo);
+    });
+    renderizarDashboard();
+}
+
 function renderizarDashboard() {
-    const rentas = datosGlobales.rentas;
-    const totalIngresos = rentas.reduce((s,r) => s+(parseFloat(r.abono)||0),0);
-    const totalDeuda    = rentas.filter(r=>r.estatus_renta==='Activa').reduce((s,r) => s+(parseFloat(r.saldo_pendiente)||0),0);
-    const vendidos      = datosGlobales.inventario.filter(i => i.estado_actual === 'Vendido');
-    const totalVentas   = vendidos.reduce((s,i) => s+(parseFloat(i.precio_venta)||0),0);
-    document.getElementById('kpi-ingresos').textContent  = '$'+totalIngresos.toLocaleString('es-MX');
-    document.getElementById('kpi-deuda').textContent     = '$'+totalDeuda.toLocaleString('es-MX');
-    document.getElementById('kpi-ventas').textContent    = '$'+totalVentas.toLocaleString('es-MX');
-    document.getElementById('kpi-vendidos').textContent  = vendidos.length + ' vendido' + (vendidos.length !== 1 ? 's' : '');
+    const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const hoy   = new Date();
+    const mesActualKey    = hoy.toISOString().substring(0,7);       // YYYY-MM
+    const mesAnteriorDate = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+    const mesAnteriorKey  = mesAnteriorDate.toISOString().substring(0,7);
+    const anioActual      = hoy.getFullYear().toString();
+
+    // Rango para filtro
+    let desde = null;
+    let labelPeriodo = 'Todos los registros';
+    if (filtroFinanzas === 'mes') {
+        desde = mesActualKey + '-01';
+        labelPeriodo = MESES[hoy.getMonth()] + ' ' + hoy.getFullYear();
+    } else if (filtroFinanzas === 'anio') {
+        desde = anioActual + '-01-01';
+        labelPeriodo = 'Año ' + anioActual;
+    }
+    document.getElementById('fin-periodo-label').textContent = labelPeriodo;
+
+    const todasRentas = datosGlobales.rentas.filter(r =>
+        r.estatus_renta !== 'Credito' && r.estatus_renta !== 'Credito Usado'
+    );
+    const rentasFiltradas = desde
+        ? todasRentas.filter(r => r.fecha_entrega && r.fecha_entrega >= desde)
+        : todasRentas;
+
+    // KPI principales
+    const totalIngresos = rentasFiltradas.reduce((s,r) => s+(parseFloat(r.abono)||0), 0);
+    const totalDeuda    = datosGlobales.rentas
+        .filter(r => r.estatus_renta === 'Activa')
+        .reduce((s,r) => s+(parseFloat(r.saldo_pendiente)||0), 0);
+    const vendidos    = datosGlobales.inventario.filter(i => i.estado_actual === 'Vendido');
+    const totalVentas = vendidos.reduce((s,i) => s+(parseFloat(i.precio_venta)||0), 0);
+
+    document.getElementById('kpi-ingresos').textContent = '$' + totalIngresos.toLocaleString('es-MX');
+    document.getElementById('kpi-deuda').textContent    = '$' + totalDeuda.toLocaleString('es-MX');
+    document.getElementById('kpi-ventas').textContent   = '$' + totalVentas.toLocaleString('es-MX');
+    document.getElementById('kpi-vendidos').textContent = vendidos.length + ' vendido' + (vendidos.length !== 1 ? 's' : '');
+
+    // Top vestido (sobre periodo filtrado)
+    const conteoVestido = {};
+    rentasFiltradas.forEach(r => {
+        if (!r.id_articulo) return;
+        conteoVestido[r.id_articulo] = (conteoVestido[r.id_articulo] || 0) + 1;
+    });
+    const topId = Object.entries(conteoVestido).sort((a,b) => b[1]-a[1])[0];
+    if (topId) {
+        const art = datosGlobales.inventario.find(i => i.id_articulo === topId[0]);
+        document.getElementById('kpi-top-vestido').textContent = art?.nombre || topId[0];
+        document.getElementById('kpi-top-veces').textContent   = topId[1] + ' renta' + (topId[1] !== 1 ? 's' : '');
+    } else {
+        document.getElementById('kpi-top-vestido').textContent = '—';
+        document.getElementById('kpi-top-veces').textContent   = '— rentas';
+    }
+
+    // Comparativa mensual (siempre mes actual vs mes anterior, independiente del filtro)
+    const rentasMesActual   = todasRentas.filter(r => r.fecha_entrega?.substring(0,7) === mesActualKey);
+    const rentasMesAnterior = todasRentas.filter(r => r.fecha_entrega?.substring(0,7) === mesAnteriorKey);
+    const ingresosMesActual   = rentasMesActual.reduce((s,r) => s+(parseFloat(r.abono)||0), 0);
+    const ingresosMesAnterior = rentasMesAnterior.reduce((s,r) => s+(parseFloat(r.abono)||0), 0);
+
+    document.getElementById('label-mes-actual').textContent    = MESES[hoy.getMonth()] + ' ' + hoy.getFullYear();
+    document.getElementById('label-mes-anterior').textContent  = MESES[mesAnteriorDate.getMonth()] + ' ' + mesAnteriorDate.getFullYear();
+    document.getElementById('kpi-mes-actual').textContent      = '$' + ingresosMesActual.toLocaleString('es-MX');
+    document.getElementById('kpi-mes-anterior').textContent    = '$' + ingresosMesAnterior.toLocaleString('es-MX');
+    document.getElementById('kpi-mes-actual-rentas').textContent   = rentasMesActual.length + ' renta' + (rentasMesActual.length !== 1 ? 's' : '');
+    document.getElementById('kpi-mes-anterior-rentas').textContent = rentasMesAnterior.length + ' renta' + (rentasMesAnterior.length !== 1 ? 's' : '');
+
+    const varRow = document.getElementById('kpi-variacion-row');
+    const deltaEl = document.getElementById('kpi-ingresos-delta');
+    if (ingresosMesAnterior > 0) {
+        const pct = ((ingresosMesActual - ingresosMesAnterior) / ingresosMesAnterior * 100);
+        const sube = pct >= 0;
+        varRow.className = 'mt-3 py-2 px-3 rounded-xl text-center text-xs font-bold ' + (sube ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600');
+        varRow.textContent = (sube ? '↑' : '↓') + ' ' + Math.abs(pct).toFixed(1) + '% vs mes anterior';
+        varRow.classList.remove('hidden');
+        // Delta badge en kpi
+        if (filtroFinanzas === 'mes') {
+            document.getElementById('kpi-ingresos-delta-icon').textContent = sube ? 'trending_up' : 'trending_down';
+            document.getElementById('kpi-ingresos-delta-icon').className = 'material-icons-round text-sm ' + (sube ? 'text-green-500' : 'text-red-500');
+            document.getElementById('kpi-ingresos-delta-text').textContent = (sube ? '+' : '') + pct.toFixed(1) + '%';
+            document.getElementById('kpi-ingresos-delta-text').className   = 'text-[11px] font-bold ' + (sube ? 'text-green-600' : 'text-red-500');
+            deltaEl.classList.remove('hidden');
+            deltaEl.classList.add('flex');
+        } else {
+            deltaEl.classList.add('hidden');
+            deltaEl.classList.remove('flex');
+        }
+    } else {
+        varRow.classList.add('hidden');
+        deltaEl.classList.add('hidden');
+        deltaEl.classList.remove('flex');
+    }
+
+    // Chart mensual (últimos 6 meses siempre, independiente del filtro)
     const porMes = {};
-    rentas.forEach(r => { if (!r.fecha_entrega) return; const m = r.fecha_entrega.substring(0,7); porMes[m]=(porMes[m]||0)+(parseFloat(r.abono)||0); });
+    todasRentas.forEach(r => {
+        if (!r.fecha_entrega) return;
+        const m = r.fecha_entrega.substring(0,7);
+        porMes[m] = (porMes[m] || 0) + (parseFloat(r.abono) || 0);
+    });
     const meses  = Object.keys(porMes).sort().slice(-6);
-    const labels = meses.map(m => { const [y,mo]=m.split('-'); return ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][parseInt(mo)-1]+' '+y.slice(2); });
+    const labels = meses.map(m => { const [y,mo]=m.split('-'); return MESES[parseInt(mo)-1]+' '+y.slice(2); });
     const ctxM = document.getElementById('chart-mensual');
-    if (ctxM) { if (ctxM._ci) ctxM._ci.destroy(); ctxM._ci = new Chart(ctxM,{ type:'bar', data:{ labels, datasets:[{ label:'Ingresos', data:meses.map(m=>porMes[m]||0), backgroundColor:'#d63384', borderRadius:8 }] }, options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} } }); }
+    if (ctxM) { if (ctxM._ci) ctxM._ci.destroy(); ctxM._ci = new Chart(ctxM, { type:'bar', data:{ labels, datasets:[{ label:'Ingresos', data:meses.map(m=>porMes[m]||0), backgroundColor: meses.map(m => m === mesActualKey ? '#d63384' : '#fbb6ce'), borderRadius:8 }] }, options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} } }); }
+
     const estados = { Disponible:0, Rentado:0, Limpieza:0 };
     datosGlobales.inventario.forEach(i => { if (estados[i.estado_actual]!==undefined) estados[i.estado_actual]++; });
     const ctxE = document.getElementById('chart-estados');
