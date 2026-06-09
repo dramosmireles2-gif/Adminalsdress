@@ -8,6 +8,30 @@ let rentaEditing   = null;
 let clienteEditing = null;
 let calendarInst   = null;
 let filtroRentas   = 'activas';
+let extraFotoArchivos = {};
+
+function comprimirImagen(file, maxW = 1200, maxH = 1200, quality = 0.82) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                let w = img.width, h = img.height;
+                if (w > maxW || h > maxH) {
+                    const ratio = Math.min(maxW / w, maxH / h);
+                    w = Math.round(w * ratio);
+                    h = Math.round(h * ratio);
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                canvas.toBlob(blob => resolve(new File([blob], 'foto.jpg', { type: 'image/jpeg' })), 'image/jpeg', quality);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
 
 function nombreArticulo(r) {
     // Acepta tanto un objeto renta como un string de id_articulo (compat)
@@ -76,6 +100,17 @@ function calcularAlertas() {
             } else if (r.fecha_entrega === manana) {
                 alertas.push({ icono: 'schedule', color: 'text-purple-500 bg-purple-50', texto: 'Entrega mañana', sub: `${nombre} — ${vestido}`, fecha: r.fecha_entrega });
             }
+        }
+    });
+
+    const limpiezaDates = JSON.parse(localStorage.getItem('als_limpieza_dates') || '{}');
+    datosGlobales.inventario.filter(i => i.estado_actual === 'Limpieza').forEach(i => {
+        const retorno = limpiezaDates[i.id_articulo];
+        if (!retorno) return;
+        if (retorno < hoy) {
+            alertas.push({ icono: 'warning', color: 'text-yellow-600 bg-yellow-50', texto: 'Limpieza vencida', sub: (i.nombre || '—') + ' — debía regresar el ' + retorno, fecha: retorno });
+        } else if (retorno === hoy) {
+            alertas.push({ icono: 'local_laundry_service', color: 'text-yellow-500 bg-yellow-50', texto: 'Limpieza lista hoy', sub: i.nombre || '—', fecha: retorno });
         }
     });
 
@@ -325,11 +360,19 @@ function renderizarInventario(lista) {
         return;
     }
 
+    const rentasPorArticulo = {};
+    datosGlobales.rentas.forEach(r => {
+        if (r.id_articulo && r.estatus_renta !== 'Credito' && r.estatus_renta !== 'Credito Usado') {
+            rentasPorArticulo[r.id_articulo] = (rentasPorArticulo[r.id_articulo] || 0) + 1;
+        }
+    });
+
     const estadoCfg = {
-        Disponible: { bg: 'bg-green-50',  text: 'text-green-700',  dot: 'bg-green-500'  },
-        Rentado:    { bg: 'bg-blue-50',   text: 'text-blue-700',   dot: 'bg-blue-500'   },
-        Limpieza:   { bg: 'bg-yellow-50', text: 'text-yellow-700', dot: 'bg-yellow-500' },
-        Apartado:   { bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500' },
+        Disponible:  { bg: 'bg-green-50',  text: 'text-green-700',  dot: 'bg-green-500'  },
+        Rentado:     { bg: 'bg-blue-50',   text: 'text-blue-700',   dot: 'bg-blue-500'   },
+        Limpieza:    { bg: 'bg-yellow-50', text: 'text-yellow-700', dot: 'bg-yellow-500' },
+        Apartado:    { bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500' },
+        'Reparación':{ bg: 'bg-red-50',    text: 'text-red-700',    dot: 'bg-red-500'    },
     };
     const tipoIcon = { Vestido: 'checkroom', Zapato: 'shoe_heel', Bolsa: 'backpack', Accesorios: 'diamond' };
 
@@ -350,7 +393,10 @@ function renderizarInventario(lista) {
                         <span class="inline-flex items-center gap-1 px-2 py-0.5 ${cfg.bg} ${cfg.text} text-[10px] font-bold rounded-full">
                             <span class="w-1.5 h-1.5 ${cfg.dot} rounded-full"></span>${item.estado_actual}
                         </span>
-                        <span class="text-pink-600 font-black text-sm">$${item.precio_base||0}</span>
+                        <div class="text-right">
+                            <span class="text-pink-600 font-black text-sm">$${item.precio_base||0}</span>
+                            ${(rentasPorArticulo[item.id_articulo]||0) > 0 ? `<p class="text-[9px] text-gray-400">${rentasPorArticulo[item.id_articulo]}× rent.</p>` : ''}
+                        </div>
                     </div>
                 </div>`;
             card.onclick = () => abrirModal(item);
@@ -369,7 +415,10 @@ function renderizarInventario(lista) {
                 <img src="${fotoUrl}" class="w-12 h-14 rounded-xl object-cover bg-gray-100 flex-shrink-0" onerror="this.src='https://placehold.co/60x72/f5f1eb/8a8a8e?text=Foto'">
                 <div class="flex-1 min-w-0">
                     <p class="font-bold text-gray-900 text-sm truncate">${item.nombre||'—'}</p>
-                    <p class="text-xs text-pink-500 font-mono mt-0.5">ID: ${item.codigo||item.id_articulo}</p>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <p class="text-xs text-pink-500 font-mono">ID: ${item.codigo||item.id_articulo}</p>
+                        ${(rentasPorArticulo[item.id_articulo]||0) > 0 ? `<span class="text-[10px] text-gray-400 font-bold">${rentasPorArticulo[item.id_articulo]}×</span>` : ''}
+                    </div>
                 </div>
                 <div class="hidden sm:flex items-center flex-shrink-0 w-14">
                     <span class="px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-bold rounded-lg">${item.talla||'—'}</span>
@@ -441,6 +490,19 @@ function abrirModal(item) {
     actualizarTallaEdicion();
     document.getElementById('edit-talla').value         = item.talla || '';
 
+    // Cargar fotos adicionales en galería
+    extraFotoArchivos = {};
+    const inp2 = document.getElementById('input-foto2'); if (inp2) inp2.value = '';
+    const inp3 = document.getElementById('input-foto3'); if (inp3) inp3.value = '';
+    const img2 = document.getElementById('preview-foto2');
+    const ph2  = document.getElementById('placeholder-foto2');
+    if (item.foto2 && img2) { img2.src = item.foto2; img2.classList.remove('hidden'); ph2?.classList.add('hidden'); }
+    else if (img2) { img2.classList.add('hidden'); ph2?.classList.remove('hidden'); }
+    const img3 = document.getElementById('preview-foto3');
+    const ph3  = document.getElementById('placeholder-foto3');
+    if (item.foto3 && img3) { img3.src = item.foto3; img3.classList.remove('hidden'); ph3?.classList.add('hidden'); }
+    else if (img3) { img3.classList.add('hidden'); ph3?.classList.remove('hidden'); }
+
     // Resetear al tab de estado
     cambiarTabModal('estado');
 
@@ -456,11 +518,19 @@ async function guardarEstado(nuevoEstado) {
     if (!itemEditing) return;
     const idArticulo = itemEditing.id_articulo;
     const idx = datosGlobales.inventario.findIndex(i => i.id_articulo === idArticulo);
+    if (nuevoEstado === 'Limpieza') {
+        await pedirFechaLimpieza(idArticulo);
+    } else {
+        const ld = JSON.parse(localStorage.getItem('als_limpieza_dates') || '{}');
+        delete ld[idArticulo];
+        localStorage.setItem('als_limpieza_dates', JSON.stringify(ld));
+    }
     cerrarModal();
     const { error } = await sb.from('inventario').update({ estado_actual: nuevoEstado }).eq('id_articulo', idArticulo);
     if (error) { Swal.fire('Error','No se pudo actualizar.','error'); return; }
     if (idx !== -1) datosGlobales.inventario[idx].estado_actual = nuevoEstado;
     renderizarInventario(datosGlobales.inventario);
+    calcularAlertas();
     Swal.fire({ icon:'success', title:'Marcado como ' + nuevoEstado, timer:1000, showConfirmButton:false });
 }
 async function cambiarVisibilidadWeb(publicado) {
@@ -497,10 +567,19 @@ function filtrarRentas(tipo) {
 function renderizarRentas(lista) {
     const contenedor = document.getElementById('lista-rentas');
     if (!contenedor) return;
+    const busqueda = (document.getElementById('buscador-rentas')?.value || '').toLowerCase().trim();
     const esHistorial = filtroRentas === 'historial';
-    const visibles = lista.filter(r => esHistorial
-        ? (r.estatus_renta === 'Finalizada' || r.estatus_renta === 'Cancelada')
-        : (r.estatus_renta === 'Activa'     || r.estatus_renta === 'Entregada'));
+    const visibles = lista.filter(r => {
+        const estadoOK = esHistorial
+            ? (r.estatus_renta === 'Finalizada' || r.estatus_renta === 'Cancelada')
+            : (r.estatus_renta === 'Activa'     || r.estatus_renta === 'Entregada');
+        if (!estadoOK) return false;
+        if (!busqueda) return true;
+        const cliente = datosGlobales.clientes.find(c => c.id_cliente === r.id_cliente);
+        const nombreCliente = (cliente?.nombre_completo || r.id_cliente || '').toLowerCase();
+        const nombreVestido = nombreArticulo(r).toLowerCase();
+        return nombreCliente.includes(busqueda) || nombreVestido.includes(busqueda);
+    });
     if (!visibles.length) {
         contenedor.innerHTML = `<p class="text-center text-gray-400 py-10 text-sm italic">${esHistorial ? 'Sin rentas en el historial.' : 'No hay rentas en curso.'}</p>`;
         return;
@@ -593,9 +672,17 @@ async function guardarEstadoRenta(nuevoEstado) {
     if (!rentaEditing) return;
     const idArticulo = rentaEditing.id_articulo;
     const idx = datosGlobales.inventario.findIndex(i => i.id_articulo === idArticulo);
+    if (nuevoEstado === 'Limpieza' && idArticulo) {
+        await pedirFechaLimpieza(idArticulo);
+    } else if (idArticulo) {
+        const ld = JSON.parse(localStorage.getItem('als_limpieza_dates') || '{}');
+        delete ld[idArticulo];
+        localStorage.setItem('als_limpieza_dates', JSON.stringify(ld));
+    }
     cerrarModalRenta();
     await sb.from('inventario').update({ estado_actual: nuevoEstado }).eq('id_articulo', idArticulo);
     if (idx !== -1) datosGlobales.inventario[idx].estado_actual = nuevoEstado;
+    calcularAlertas();
     Swal.fire({ icon:'success', title:'Vestido → ' + nuevoEstado, timer:1000, showConfirmButton:false });
 }
 
@@ -770,7 +857,9 @@ async function recibirDevolucionJS() {
     renderizarRentas(datosGlobales.rentas);
     renderizarInventario(datosGlobales.inventario);
 
-    Swal.fire({ icon: 'success', title: '¡Renta cerrada!', text: 'Vestido enviado a limpieza.', timer: 1500, showConfirmButton: false });
+    await Swal.fire({ icon: 'success', title: '¡Renta cerrada!', text: 'Vestido enviado a limpieza.', timer: 1500, showConfirmButton: false });
+    if (r.id_articulo) await pedirFechaLimpieza(r.id_articulo);
+    calcularAlertas();
 }
 function toggleEditarRenta() {
     const seccion = document.getElementById('renta-edit-section');
@@ -1189,35 +1278,58 @@ async function venderVestido() {
     if (!itemEditing) return;
     const item = { ...itemEditing };
 
-    const confirm = await Swal.fire({
+    const { value: formValues, isConfirmed } = await Swal.fire({
         title: '¿Marcar como Vendido?',
-        text: 'El vestido se ocultará del inventario y del catálogo público.',
+        html: `<p class="text-gray-500 text-sm mb-4">El vestido se ocultará del inventario y del catálogo.</p>
+               <div class="space-y-3 text-left">
+                 <div>
+                   <label class="text-xs font-bold text-gray-600 block mb-1">Precio de venta final</label>
+                   <input type="number" id="swal-precio-venta" class="swal2-input !mt-0" value="${item.precio_venta || ''}" placeholder="$ precio de venta">
+                 </div>
+                 <div>
+                   <label class="text-xs font-bold text-gray-600 block mb-1">Comprador <span class="font-normal text-gray-400">(opcional)</span></label>
+                   <input type="text" id="swal-comprador" class="swal2-input !mt-0" placeholder="Nombre del comprador">
+                 </div>
+               </div>`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#7c3aed',
         cancelButtonColor: '#9ca3af',
-        confirmButtonText: 'Sí, vendido',
-        cancelButtonText: 'Cancelar'
+        confirmButtonText: 'Sí, marcar como vendido',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => ({
+            precioVenta: parseFloat(document.getElementById('swal-precio-venta').value) || null,
+            comprador:   document.getElementById('swal-comprador').value.trim()
+        })
     });
 
-    if (!confirm.isConfirmed) return;
+    if (!isConfirmed) return;
 
-    const { error } = await sb.from('inventario').update({
-        estado_actual: 'Vendido',
-        publicado: false
-    }).eq('id_articulo', item.id_articulo);
+    const updates = { estado_actual: 'Vendido', publicado: false };
+    if (formValues.precioVenta) updates.precio_venta = formValues.precioVenta;
+    if (formValues.comprador)   updates.comprador    = formValues.comprador;
 
-    if (error) { Swal.fire('Error', 'No se pudo actualizar.', 'error'); return; }
+    const { error } = await sb.from('inventario').update(updates).eq('id_articulo', item.id_articulo);
+    if (error) {
+        if (formValues.comprador && error.message?.includes('comprador')) {
+            delete updates.comprador;
+            const { error: e2 } = await sb.from('inventario').update(updates).eq('id_articulo', item.id_articulo);
+            if (e2) { Swal.fire('Error', 'No se pudo actualizar.', 'error'); return; }
+        } else {
+            Swal.fire('Error', 'No se pudo actualizar.', 'error'); return;
+        }
+    }
 
     const idx = datosGlobales.inventario.findIndex(i => i.id_articulo === item.id_articulo);
-    if (idx !== -1) {
-        datosGlobales.inventario[idx].estado_actual = 'Vendido';
-        datosGlobales.inventario[idx].publicado     = false;
-    }
+    if (idx !== -1) Object.assign(datosGlobales.inventario[idx], updates);
 
     cerrarModal();
     renderizarInventario(datosGlobales.inventario);
-    Swal.fire({ icon: 'success', title: '¡Vestido vendido!', text: 'Ya no aparece en el inventario activo.', timer: 1500, showConfirmButton: false });
+    const extras = [
+        formValues.precioVenta ? `Precio: $${formValues.precioVenta}` : null,
+        formValues.comprador   ? `Comprador: ${formValues.comprador}` : null
+    ].filter(Boolean).join(' · ');
+    Swal.fire({ icon: 'success', title: '¡Vestido vendido!', text: 'Ya no aparece en el inventario activo.' + (extras ? '\n' + extras : ''), timer: 2000, showConfirmButton: false });
 }
 
 // ---- HISTORIAL DEL VESTIDO ----

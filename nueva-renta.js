@@ -12,6 +12,61 @@ let clientesData       = [];
 let creditoDisponible  = 0;
 let creditoAplicado    = false;
 
+const BORRADOR_KEY = 'als_borrador_renta';
+
+function guardarBorrador() {
+    try {
+        const datos = {
+            id_cliente:      document.getElementById('id_cliente')?.value,
+            nombre_cliente:  document.getElementById('nombre_cliente')?.value,
+            selected_text:   document.getElementById('selected-text')?.textContent,
+            id_articulo:     document.getElementById('id_articulo')?.value,
+            nombre_articulo: document.getElementById('nombre_articulo')?.value,
+            fecha_evento:    document.getElementById('fecha_evento')?.value,
+            fecha_entrega:   document.getElementById('fecha_entrega')?.value,
+            fecha_retorno:   document.getElementById('fecha_retorno')?.value,
+            total:           document.getElementById('total')?.value,
+            descuento:       document.getElementById('descuento')?.value,
+            abono:           document.getElementById('abono')?.value,
+            ajustes:         document.getElementById('ajustes')?.value,
+            externo:         document.getElementById('toggle-externo')?.checked,
+            nombre_externo:  document.getElementById('nombre-externo')?.value,
+            precio_externo:  document.getElementById('precio-externo')?.value,
+            ts:              Date.now()
+        };
+        localStorage.setItem(BORRADOR_KEY, JSON.stringify(datos));
+    } catch(e) {}
+}
+
+function restaurarBorrador(datos) {
+    if (datos.id_cliente) document.getElementById('id_cliente').value = datos.id_cliente;
+    if (datos.nombre_cliente) {
+        document.getElementById('nombre_cliente').value  = datos.nombre_cliente;
+        const cs = document.getElementById('cliente-seleccionado');
+        if (cs) cs.textContent = datos.nombre_cliente;
+    }
+    if (datos.id_articulo)     document.getElementById('id_articulo').value      = datos.id_articulo;
+    if (datos.nombre_articulo) document.getElementById('nombre_articulo').value  = datos.nombre_articulo;
+    if (datos.selected_text) {
+        const st = document.getElementById('selected-text');
+        if (st && datos.selected_text !== 'Toca para elegir artículo...') st.textContent = datos.selected_text;
+    }
+    if (datos.fecha_evento)  document.getElementById('fecha_evento').value  = datos.fecha_evento;
+    if (datos.fecha_entrega) document.getElementById('fecha_entrega').value = datos.fecha_entrega;
+    if (datos.fecha_retorno) document.getElementById('fecha_retorno').value = datos.fecha_retorno;
+    if (datos.total)         document.getElementById('total').value         = datos.total;
+    if (datos.descuento)     document.getElementById('descuento').value     = datos.descuento;
+    if (datos.abono)         document.getElementById('abono').value         = datos.abono;
+    if (datos.ajustes)       document.getElementById('ajustes').value       = datos.ajustes;
+    if (datos.externo) {
+        const tog = document.getElementById('toggle-externo');
+        if (tog) { tog.checked = true; toggleModoExterno(); }
+    }
+    if (datos.nombre_externo) document.getElementById('nombre-externo').value = datos.nombre_externo;
+    if (datos.precio_externo) document.getElementById('precio-externo').value = datos.precio_externo;
+    calcularSaldos();
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     // Verificar sesión
     const { data: { session } } = await sb.auth.getSession();
@@ -40,6 +95,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', calcularSaldos);
     });
+
+    // Auto-save: wire all relevant fields
+    const camposBorrador = ['id_cliente','fecha_evento','fecha_entrega','fecha_retorno','total','descuento','abono','ajustes','nombre-externo','precio-externo'];
+    camposBorrador.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.addEventListener('input', guardarBorrador); el.addEventListener('change', guardarBorrador); }
+    });
+    document.getElementById('toggle-externo')?.addEventListener('change', guardarBorrador);
+
+    // Restore draft if exists
+    const borradorRaw = localStorage.getItem(BORRADOR_KEY);
+    if (borradorRaw) {
+        try {
+            const datos = JSON.parse(borradorRaw);
+            const hace  = Math.round((Date.now() - (datos.ts || 0)) / 60000);
+            if (hace < 1440) {
+                const label = hace < 60 ? `${hace} minuto${hace !== 1 ? 's' : ''}` : `${Math.round(hace/60)} hora${Math.round(hace/60) !== 1 ? 's' : ''}`;
+                const { isConfirmed } = await Swal.fire({
+                    icon: 'info',
+                    title: 'Borrador guardado',
+                    text: `Tienes un borrador de hace ${label}. ¿Restaurarlo?`,
+                    showCancelButton: true,
+                    confirmButtonText: 'Restaurar',
+                    confirmButtonColor: '#d63384',
+                    cancelButtonText: 'Descartar',
+                    cancelButtonColor: '#9ca3af',
+                });
+                if (isConfirmed) restaurarBorrador(datos);
+                else localStorage.removeItem(BORRADOR_KEY);
+            } else {
+                localStorage.removeItem(BORRADOR_KEY);
+            }
+        } catch(e) { localStorage.removeItem(BORRADOR_KEY); }
+    }
 });
 
 // ---- CRÉDITOS ----
@@ -136,6 +225,7 @@ function seleccionarVestido(item) {
     if (inputTotal) inputTotal.value = item.precio_base || 0;
     calcularSaldos();
     toggleDropdown();
+    guardarBorrador();
 }
 
 // ---- CÁLCULOS ----
@@ -202,6 +292,7 @@ function renderizarListaClientes(lista) {
             document.getElementById('cliente-seleccionado').textContent = c.nombre_completo;
             document.getElementById('cliente-dropdown')?.classList.add('hidden');
             verificarCredito(c.id_cliente);
+            guardarBorrador();
         };
         contenedor.appendChild(div);
     });
@@ -354,6 +445,7 @@ document.getElementById('form-renta')?.addEventListener('submit', async (e) => {
             window.open('https://wa.me/' + numWA + '?text=' + encodeURIComponent(msgSep), '_blank');
         }
 
+        localStorage.removeItem(BORRADOR_KEY);
         window.location.href = 'admin.html';
 
     } catch (err) {
