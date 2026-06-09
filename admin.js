@@ -458,6 +458,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (b) b.value = e.target.value;
         renderizarInventario(datosGlobales.inventario);
     });
+
+    document.getElementById('input-foto2')?.addEventListener('change', async function() {
+        if (!this.files[0]) return;
+        const comp = await comprimirImagen(this.files[0]);
+        extraFotoArchivos['foto2'] = comp;
+        const img = document.getElementById('preview-foto2');
+        const ph  = document.getElementById('placeholder-foto2');
+        img.src = URL.createObjectURL(comp);
+        img.classList.remove('hidden');
+        ph?.classList.add('hidden');
+    });
+    document.getElementById('input-foto3')?.addEventListener('change', async function() {
+        if (!this.files[0]) return;
+        const comp = await comprimirImagen(this.files[0]);
+        extraFotoArchivos['foto3'] = comp;
+        const img = document.getElementById('preview-foto3');
+        const ph  = document.getElementById('placeholder-foto3');
+        img.src = URL.createObjectURL(comp);
+        img.classList.remove('hidden');
+        ph?.classList.add('hidden');
+    });
 });
 
 const ESTADO_BTN_BASE   = 'estado-btn px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5';
@@ -1268,6 +1289,21 @@ async function guardarEdicion() {
         datosGlobales.inventario[idx].precio_venta = precio_venta;
     }
 
+    // Upload extra photos if new ones were selected
+    for (const key of ['foto2', 'foto3']) {
+        const file = extraFotoArchivos[key];
+        if (!file) continue;
+        const num  = key.slice(-1);
+        const ruta = `inventario/${item.id_articulo}_${num}.jpg`;
+        const { error: storErr } = await sb.storage.from('fotos').upload(ruta, file, { upsert: true, contentType: 'image/jpeg' });
+        if (!storErr) {
+            const { data: urlData } = sb.storage.from('fotos').getPublicUrl(ruta);
+            await sb.from('inventario').update({ [key]: urlData.publicUrl }).eq('id_articulo', item.id_articulo);
+            if (idx !== -1) datosGlobales.inventario[idx][key] = urlData.publicUrl;
+        }
+    }
+    extraFotoArchivos = {};
+
     cerrarModal();
     renderizarInventario(datosGlobales.inventario);
     Swal.fire({ icon: 'success', title: '¡Guardado!', timer: 1000, showConfirmButton: false });
@@ -1374,4 +1410,92 @@ function cargarHistorialVestido() {
 async function cerrarSesion() {
     await sb.auth.signOut();
     window.location.href = 'index.html';
+}
+
+async function extenderDevolucionJS() {
+    if (!rentaEditing) return;
+    const r = rentaEditing;
+    const { value: nuevaFecha, isConfirmed } = await Swal.fire({
+        title: 'Extender devolución',
+        html: `<p class="text-sm text-gray-500 mb-3">Fecha actual: <b>${r.fecha_retorno || '—'}</b></p>
+               <label class="text-xs font-bold text-gray-600">Nueva fecha de devolución</label>
+               <input type="date" id="swal-nueva-dev" class="swal2-input" value="${r.fecha_retorno || ''}">`,
+        confirmButtonText: 'Guardar',
+        confirmButtonColor: '#d63384',
+        showCancelButton: true,
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            const v = document.getElementById('swal-nueva-dev').value;
+            if (!v) { Swal.showValidationMessage('Selecciona una fecha'); return false; }
+            if (r.fecha_retorno && v <= r.fecha_retorno) { Swal.showValidationMessage('Debe ser posterior a la fecha actual'); return false; }
+            return v;
+        }
+    });
+    if (!isConfirmed) return;
+    Swal.fire({ title: 'Guardando...', didOpen: () => Swal.showLoading() });
+    const { error } = await sb.from('rentas').update({ fecha_retorno: nuevaFecha }).eq('id_renta', r.id_renta);
+    if (error) { Swal.fire('Error', 'No se pudo guardar.', 'error'); return; }
+    rentaEditing.fecha_retorno = nuevaFecha;
+    const idx = datosGlobales.rentas.findIndex(x => x.id_renta === r.id_renta);
+    if (idx !== -1) datosGlobales.rentas[idx].fecha_retorno = nuevaFecha;
+    document.getElementById('renta-modal-fecha-r').textContent = nuevaFecha;
+    renderizarRentas(datosGlobales.rentas);
+    calcularAlertas();
+    Swal.fire({ icon: 'success', title: '¡Devolución extendida!', text: `Nueva fecha: ${nuevaFecha}`, timer: 1500, showConfirmButton: false });
+}
+
+async function pedirFechaLimpieza(idArticulo) {
+    const d = new Date(); d.setDate(d.getDate() + 3);
+    const def = d.toISOString().split('T')[0];
+    const { value: fecha, isConfirmed } = await Swal.fire({
+        title: 'Enviando a limpieza',
+        html: `<label class="text-sm text-gray-600 block mb-2">¿Cuándo esperas que regrese?</label>
+               <input type="date" id="swal-fecha-limpieza" class="swal2-input" value="${def}">`,
+        confirmButtonText: 'Guardar',
+        confirmButtonColor: '#d63384',
+        showCancelButton: true,
+        cancelButtonText: 'Sin fecha',
+        preConfirm: () => document.getElementById('swal-fecha-limpieza').value
+    });
+    const ld = JSON.parse(localStorage.getItem('als_limpieza_dates') || '{}');
+    if (isConfirmed && fecha) ld[idArticulo] = fecha;
+    else delete ld[idArticulo];
+    localStorage.setItem('als_limpieza_dates', JSON.stringify(ld));
+}
+
+function exportarCSV(tipo) {
+    let headers = [], rows = [], nombre = '';
+    if (tipo === 'rentas') {
+        headers = ['ID Renta','Cliente','Vestido','Evento','Entrega','Devolución','Total','Descuento','Abono','Saldo','Estado'];
+        rows = datosGlobales.rentas
+            .filter(r => r.estatus_renta !== 'Credito' && r.estatus_renta !== 'Credito Usado')
+            .map(r => {
+                const cl = datosGlobales.clientes.find(c => c.id_cliente === r.id_cliente);
+                return [r.id_renta, cl?.nombre_completo||r.id_cliente, nombreArticulo(r),
+                    r.fecha_evento, r.fecha_entrega, r.fecha_retorno,
+                    r.total_renta, r.descuento, r.abono, r.saldo_pendiente, r.estatus_renta];
+            });
+        nombre = 'rentas_als';
+    } else if (tipo === 'inventario') {
+        headers = ['ID','Nombre','Tipo','Talla','Color','Precio Renta','Precio Venta','Estado','Publicado','Destacado'];
+        rows = datosGlobales.inventario.map(i => [
+            i.id_articulo, i.nombre, i.tipo, i.talla, i.color,
+            i.precio_base, i.precio_venta, i.estado_actual,
+            i.publicado ? 'Sí' : 'No', i.destacado ? 'Sí' : 'No'
+        ]);
+        nombre = 'inventario_als';
+    } else if (tipo === 'clientes') {
+        headers = ['ID','Nombre','Teléfono','Total Rentas','Crédito'];
+        rows = datosGlobales.clientes.map(c => {
+            const nr = datosGlobales.rentas.filter(r => r.id_cliente === c.id_cliente && r.estatus_renta !== 'Credito' && r.estatus_renta !== 'Credito Usado').length;
+            const cr = datosGlobales.rentas.filter(r => r.id_cliente === c.id_cliente && r.estatus_renta === 'Credito').reduce((s,r) => s+(parseFloat(r.abono)||0),0);
+            return [c.id_cliente, c.nombre_completo, c.telefono, nr, cr.toFixed(0)];
+        });
+        nombre = 'clientes_als';
+    }
+    const csv = [headers, ...rows].map(r => r.map(v => `"${(v??'').toString().replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: nombre + '_' + new Date().toISOString().split('T')[0] + '.csv' });
+    a.click();
+    URL.revokeObjectURL(a.href);
 }
