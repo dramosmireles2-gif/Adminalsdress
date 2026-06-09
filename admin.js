@@ -681,6 +681,7 @@ function abrirModalRenta(r) {
     document.getElementById('btn-entregar').classList.toggle('hidden', !esActiva);
     document.getElementById('btn-devolucion').classList.toggle('hidden', !esEntregada);
     document.getElementById('btn-cancelar').classList.toggle('hidden', !esActiva && !esEntregada);
+    document.getElementById('btn-agregar-articulo').classList.toggle('hidden', !esActiva && !esEntregada);
     document.getElementById('modal-renta-detalle').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
 }
@@ -712,35 +713,53 @@ async function cancelarRentaJS() {
     const r = { ...rentaEditing };
     const abono = parseFloat(r.abono) || 0;
 
-    const opcs = {
+    const tieneAbono = abono > 0;
+    const { value: opcion, isConfirmed } = await Swal.fire({
         title: '¿Cancelar esta renta?',
         icon: 'warning',
+        html: tieneAbono
+            ? `<p class="text-sm text-gray-500 mb-4">El cliente dejó un abono de <b class="text-gray-800">$${abono.toFixed(0)}</b>. ¿Qué hacemos con ese dinero?</p>
+               <div class="space-y-2 text-left">
+                 <label class="flex items-start gap-3 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-pink-300 transition-colors has-[:checked]:border-red-400 has-[:checked]:bg-red-50">
+                   <input type="radio" name="cancel-opt" value="retener" class="mt-0.5 accent-red-500">
+                   <div><p class="font-bold text-sm text-gray-800">Retener abono</p><p class="text-xs text-gray-400">El dinero queda como cargo de cancelación</p></div>
+                 </label>
+                 <label class="flex items-start gap-3 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-pink-300 transition-colors has-[:checked]:border-indigo-400 has-[:checked]:bg-indigo-50">
+                   <input type="radio" name="cancel-opt" value="credito" class="mt-0.5 accent-indigo-500">
+                   <div><p class="font-bold text-sm text-gray-800">Crédito a favor</p><p class="text-xs text-gray-400">$${abono.toFixed(0)} quedan disponibles para una futura renta</p></div>
+                 </label>
+                 <label class="flex items-start gap-3 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-pink-300 transition-colors has-[:checked]:border-green-400 has-[:checked]:bg-green-50">
+                   <input type="radio" name="cancel-opt" value="efectivo" class="mt-0.5 accent-green-500">
+                   <div><p class="font-bold text-sm text-gray-800">Devolver en efectivo</p><p class="text-xs text-gray-400">Se entrega $${abono.toFixed(0)} al cliente</p></div>
+                 </label>
+               </div>`
+            : `<p class="text-sm text-gray-500">La renta se marcará como cancelada. No hay abono que devolver.</p>`,
         showCancelButton: true,
         cancelButtonText: 'No, conservar',
         cancelButtonColor: '#9ca3af',
+        confirmButtonText: 'Cancelar renta',
+        confirmButtonColor: '#ef4444',
         reverseButtons: true,
-    };
-    if (abono > 0) {
-        opcs.html = `El cliente dejó un abono de <b>$${abono.toFixed(0)}</b>.<br><br>¿Qué hacemos con ese dinero?`;
-        opcs.showDenyButton = true;
-        opcs.confirmButtonText = 'Sin devolución';
-        opcs.confirmButtonColor = '#ef4444';
-        opcs.denyButtonText = `Dar crédito a favor ($${abono.toFixed(0)})`;
-        opcs.denyButtonColor = '#6366f1';
-    } else {
-        opcs.text = 'La renta se marcará como cancelada.';
-        opcs.confirmButtonText = 'Sí, cancelar';
-        opcs.confirmButtonColor = '#ef4444';
-    }
-
-    const result = await Swal.fire(opcs);
-    if (!result.isConfirmed && !result.isDenied) return;
+        preConfirm: () => {
+            if (!tieneAbono) return 'sin_abono';
+            const sel = document.querySelector('input[name="cancel-opt"]:checked');
+            if (!sel) { Swal.showValidationMessage('Selecciona una opción'); return false; }
+            return sel.value;
+        }
+    });
+    if (!isConfirmed) return;
 
     Swal.fire({ title: 'Procesando...', didOpen: () => Swal.showLoading() });
 
-    await sb.from('rentas').update({ estatus_renta: 'Cancelada', saldo_pendiente: 0 }).eq('id_renta', r.id_renta);
+    const notaAjuste = opcion === 'credito'  ? `Cancelada · $${abono.toFixed(0)} en crédito a favor`
+                     : opcion === 'efectivo' ? `Cancelada · $${abono.toFixed(0)} devuelto en efectivo`
+                     : opcion === 'retener'  ? `Cancelada · $${abono.toFixed(0)} retenido`
+                     : 'Cancelada';
+    const ajustesActual = r.ajustes ? r.ajustes + '\n' + notaAjuste : notaAjuste;
 
-    if (result.isDenied && abono > 0) {
+    await sb.from('rentas').update({ estatus_renta: 'Cancelada', saldo_pendiente: 0, ajustes: ajustesActual }).eq('id_renta', r.id_renta);
+
+    if (opcion === 'credito' && abono > 0) {
         const credEntry = {
             id_renta: 'CRED-' + Date.now().toString(16).slice(-8).toUpperCase(),
             id_cliente: r.id_cliente, id_articulo: null, estatus_renta: 'Credito',
@@ -761,15 +780,20 @@ async function cancelarRentaJS() {
     }
 
     const iR = datosGlobales.rentas.findIndex(rr => rr.id_renta === r.id_renta);
-    if (iR !== -1) { datosGlobales.rentas[iR].estatus_renta = 'Cancelada'; datosGlobales.rentas[iR].saldo_pendiente = 0; }
+    if (iR !== -1) {
+        datosGlobales.rentas[iR].estatus_renta = 'Cancelada';
+        datosGlobales.rentas[iR].saldo_pendiente = 0;
+        datosGlobales.rentas[iR].ajustes = ajustesActual;
+    }
 
     cerrarModalRenta();
     renderizarRentas(datosGlobales.rentas);
     renderizarInventario(datosGlobales.inventario);
 
-    const msg = result.isDenied && abono > 0
-        ? `Se generó un crédito de $${abono.toFixed(0)} a favor del cliente.`
-        : 'La renta fue cancelada sin devolución.';
+    const msg = opcion === 'credito'  ? `Se generó un crédito de $${abono.toFixed(0)} a favor del cliente.`
+              : opcion === 'efectivo' ? `Recuerda devolver $${abono.toFixed(0)} en efectivo al cliente.`
+              : opcion === 'retener'  ? `El abono de $${abono.toFixed(0)} queda retenido.`
+              : 'La renta fue cancelada.';
     Swal.fire({ icon: 'success', title: 'Renta cancelada', text: msg, timer: 2500, showConfirmButton: false });
 }
 async function entregarVestidoJS() {
@@ -777,27 +801,53 @@ async function entregarVestidoJS() {
     const saldo = parseFloat(rentaEditing.saldo_pendiente) || 0;
 
     // Paso 1: documento de garantía (y avisar si hay saldo pendiente)
-    const { value: docGarantia, isConfirmed } = await Swal.fire({
+    const { value: docForm, isConfirmed } = await Swal.fire({
         title: 'Entregar vestido',
-        html: saldo > 0
-            ? `Se cobrará el saldo pendiente de <b>$${saldo.toFixed(0)}</b>.<br><br>¿Qué documento deja el cliente?`
-            : '¿Qué documento deja el cliente?',
-        input: 'select',
-        inputOptions: { INE: 'INE', VISA: 'VISA', PASAPORTE: 'Pasaporte', LICENCIA: 'Licencia', Ninguno: 'Ninguno' },
-        inputPlaceholder: 'Selecciona...',
+        html: `${saldo > 0 ? `<p class="text-sm text-gray-500 mb-4">Se cobrará el saldo pendiente de <b class="text-gray-800">$${saldo.toFixed(0)}</b>.</p>` : ''}
+               <div class="space-y-3 text-left">
+                 <div>
+                   <label class="text-xs font-bold text-gray-600 block mb-1">Documento de garantía</label>
+                   <select id="swal-doc-tipo" class="swal2-select !w-full !mt-0">
+                     <option value="">Sin documento</option>
+                     <option value="INE">INE</option>
+                     <option value="VISA">VISA</option>
+                     <option value="PASAPORTE">Pasaporte</option>
+                     <option value="LICENCIA">Licencia</option>
+                     <option value="OTRO">Otro</option>
+                   </select>
+                 </div>
+                 <div id="swal-doc-num-wrap">
+                   <label class="text-xs font-bold text-gray-600 block mb-1">Número / folio <span class="font-normal text-gray-400">(opcional)</span></label>
+                   <input type="text" id="swal-doc-num" class="swal2-input !mt-0" placeholder="Ej: GARC850101M">
+                 </div>
+               </div>`,
         showCancelButton: true,
         cancelButtonText: 'Cancelar',
         confirmButtonText: 'Entregar vestido',
         confirmButtonColor: '#d63384',
+        didOpen: () => {
+            document.getElementById('swal-doc-tipo').addEventListener('change', (e) => {
+                document.getElementById('swal-doc-num-wrap').style.display = e.target.value ? 'block' : 'none';
+            });
+            document.getElementById('swal-doc-num-wrap').style.display = 'none';
+        },
+        preConfirm: () => ({
+            tipo: document.getElementById('swal-doc-tipo').value,
+            num:  document.getElementById('swal-doc-num').value.trim()
+        })
     });
     if (!isConfirmed) return;
+
+    const docGarantia = docForm.tipo
+        ? (docForm.num ? `${docForm.tipo}|${docForm.num}` : docForm.tipo)
+        : '';
 
     Swal.fire({ title: 'Registrando entrega...', didOpen: () => Swal.showLoading() });
 
     const { error } = await sb.from('rentas').update({
         saldo_pendiente:    0,
         abono:              rentaEditing.total_renta,
-        documento_garantia: docGarantia || '',
+        documento_garantia: docGarantia,
         estatus_renta:      'Entregada',
     }).eq('id_renta', rentaEditing.id_renta);
 
@@ -1000,7 +1050,7 @@ function enviarReciboWhatsApp() {
         `Evento: ${r.fecha_evento || '—'}`,
         `Entrega: ${r.fecha_entrega || '—'}`,
         `Devolución: ${r.fecha_retorno || '—'}`,
-        `Documento: ${r.documento_garantia || 'Ninguno'}`,
+        `Documento: ${parsearDocGarantia(r.documento_garantia).label}`,
         `Total pagado: $${total.toFixed(0)}`,
         `¡Gracias por tu preferencia! 💕`,
     ].join('\n');
@@ -1023,13 +1073,18 @@ function renderizarClientes() {
     }
     contenedor.innerHTML = '';
     datosGlobales.clientes.forEach(c => {
-        const rentas  = datosGlobales.rentas.filter(r => r.id_cliente === c.id_cliente);
-        const inicial = (c.nombre_completo||'?')[0].toUpperCase();
+        const rentas      = datosGlobales.rentas.filter(r => r.id_cliente === c.id_cliente);
+        const rentasReales= rentas.filter(r => r.estatus_renta !== 'Credito' && r.estatus_renta !== 'Credito Usado');
+        const esVIP       = rentasReales.length >= 3;
+        const inicial     = (c.nombre_completo||'?')[0].toUpperCase();
         const card = document.createElement('div');
         card.className = 'item-card bg-white rounded-2xl border border-gray-100 p-3 flex items-center gap-3 cursor-pointer active:scale-95 transition-all';
         card.innerHTML = `<div class="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center text-pink-600 font-bold text-xl border border-pink-100 flex-shrink-0">${inicial}</div>
             <div class="flex-1 min-w-0">
-                <p class="font-bold text-gray-900 text-sm">${c.nombre_completo}</p>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                    <p class="font-bold text-gray-900 text-sm">${c.nombre_completo}</p>
+                    ${esVIP ? '<span class="text-[9px] font-bold bg-amber-400 text-white px-1.5 py-0.5 rounded-full leading-none">⭐ VIP</span>' : ''}
+                </div>
                 <p class="text-[10px] text-gray-400 mt-0.5 font-mono">${c.id_cliente}</p>
             </div>
             <span class="text-[10px] bg-pink-50 text-pink-600 px-2.5 py-1 rounded-full font-bold border border-pink-100 flex-shrink-0">${rentas.length} rentas</span>`;
@@ -1045,6 +1100,8 @@ function toggleEditarCliente() {
     if (oculta) {
         document.getElementById('cliente-edit-nombre').value = clienteEditing?.nombre_completo || '';
         document.getElementById('cliente-edit-tel').value    = clienteEditing?.telefono || '';
+        document.getElementById('cliente-edit-email').value  = clienteEditing?.email || '';
+        document.getElementById('cliente-edit-notas').value  = clienteEditing?.notas || '';
         seccion.classList.remove('hidden');
         btn.textContent = 'Cancelar';
         document.getElementById('cliente-edit-nombre').focus();
@@ -1058,17 +1115,49 @@ async function guardarClienteJS() {
     if (!clienteEditing) return;
     const nombre = document.getElementById('cliente-edit-nombre').value.trim();
     const tel    = document.getElementById('cliente-edit-tel').value.trim();
+    const email  = document.getElementById('cliente-edit-email').value.trim();
+    const notas  = document.getElementById('cliente-edit-notas').value.trim();
     if (!nombre) return Swal.fire('Falta nombre', 'El nombre no puede estar vacío.', 'warning');
 
     Swal.fire({ title: 'Guardando...', didOpen: () => Swal.showLoading() });
 
-    const { error } = await sb.from('clientes').update({ nombre_completo: nombre, telefono: tel }).eq('id_cliente', clienteEditing.id_cliente);
+    const updates = { nombre_completo: nombre, telefono: tel, email: email || null, notas: notas || null };
+    let { error } = await sb.from('clientes').update(updates).eq('id_cliente', clienteEditing.id_cliente);
+    if (error && (error.message?.includes('email') || error.message?.includes('notas'))) {
+        const base = { nombre_completo: nombre, telefono: tel };
+        ({ error } = await sb.from('clientes').update(base).eq('id_cliente', clienteEditing.id_cliente));
+    }
     if (error) { Swal.fire('Error', 'No se pudo guardar.', 'error'); return; }
 
     const idx = datosGlobales.clientes.findIndex(c => c.id_cliente === clienteEditing.id_cliente);
-    if (idx !== -1) { datosGlobales.clientes[idx].nombre_completo = nombre; datosGlobales.clientes[idx].telefono = tel; }
+    if (idx !== -1) {
+        datosGlobales.clientes[idx].nombre_completo = nombre;
+        datosGlobales.clientes[idx].telefono = tel;
+        datosGlobales.clientes[idx].email = email || null;
+        datosGlobales.clientes[idx].notas = notas || null;
+    }
     clienteEditing.nombre_completo = nombre;
     clienteEditing.telefono        = tel;
+    clienteEditing.email           = email || null;
+    clienteEditing.notas           = notas || null;
+
+    // Refresh stats/notes display in modal
+    const emailEl = document.getElementById('cliente-modal-email');
+    const emailTextEl = document.getElementById('cliente-modal-email-text');
+    if (email) {
+        emailTextEl.textContent = email;
+        emailEl.href = 'mailto:' + email;
+        emailEl.style.display = 'inline-flex';
+    } else {
+        emailEl.style.display = 'none';
+    }
+    const notasDisplay = document.getElementById('cliente-notas-display');
+    if (notas) {
+        document.getElementById('cliente-notas-text').textContent = notas;
+        notasDisplay.classList.remove('hidden');
+    } else {
+        notasDisplay.classList.add('hidden');
+    }
 
     // Actualizar lo visible en el modal
     document.getElementById('cliente-modal-nombre').textContent = nombre;
@@ -1147,6 +1236,33 @@ function abrirHistorialCliente(cliente) {
     const creditoBadge = document.getElementById('cliente-credito-badge');
     if (credito > 0) { creditoBadge.textContent = '$' + credito.toFixed(0) + ' crédito'; creditoBadge.classList.remove('hidden'); }
     else { creditoBadge.classList.add('hidden'); }
+    document.getElementById('badge-vip').classList.toggle('hidden', rentasReales.length < 3);
+
+    const totalGastado = rentasReales.reduce((s, r) => s + (parseFloat(r.abono) || 0), 0);
+    document.getElementById('cliente-total-gastado').textContent = '$' + totalGastado.toLocaleString('es-MX');
+
+    const fechasEntrega = rentasReales.map(r => r.fecha_entrega).filter(Boolean).sort();
+    const ultimaRenta = fechasEntrega.length ? fechasEntrega[fechasEntrega.length - 1] : null;
+    document.getElementById('cliente-ultima-renta').textContent = ultimaRenta || '—';
+
+    const emailEl = document.getElementById('cliente-modal-email');
+    const emailTextEl = document.getElementById('cliente-modal-email-text');
+    if (cliente.email) {
+        emailTextEl.textContent = cliente.email;
+        emailEl.href = 'mailto:' + cliente.email;
+        emailEl.style.display = 'inline-flex';
+    } else {
+        emailEl.style.display = 'none';
+    }
+
+    const notasDisplay = document.getElementById('cliente-notas-display');
+    if (cliente.notas) {
+        document.getElementById('cliente-notas-text').textContent = cliente.notas;
+        notasDisplay.classList.remove('hidden');
+    } else {
+        notasDisplay.classList.add('hidden');
+    }
+
     const tel  = (cliente.telefono||'').replace(/\D/g,'');
     const waEl = document.getElementById('cliente-modal-whatsapp');
     if (tel) { waEl.href = 'https://wa.me/'+(tel.length===10?'52'+tel:tel); waEl.classList.remove('hidden'); }
@@ -1498,4 +1614,88 @@ function exportarCSV(tipo) {
     const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: nombre + '_' + new Date().toISOString().split('T')[0] + '.csv' });
     a.click();
     URL.revokeObjectURL(a.href);
+}
+
+function parsearDocGarantia(doc) {
+    if (!doc) return { tipo: '', num: '', label: 'Ninguno' };
+    const parts = doc.split('|');
+    if (parts.length >= 2) return { tipo: parts[0], num: parts[1], label: `${parts[0]} · ${parts[1]}` };
+    return { tipo: doc, num: '', label: doc };
+}
+
+async function agregarArticuloVinculadoJS() {
+    if (!rentaEditing) return;
+    const rentaPrincipal = rentaEditing;
+    const cliente = datosGlobales.clientes.find(c => c.id_cliente === rentaPrincipal.id_cliente);
+
+    const disponibles = datosGlobales.inventario.filter(i => i.estado_actual === 'Disponible');
+    if (!disponibles.length) {
+        Swal.fire('Sin artículos', 'No hay artículos disponibles en este momento.', 'info');
+        return;
+    }
+
+    const optsHtml = disponibles.map(i =>
+        `<option value="${i.id_articulo}">${i.nombre} (${i.talla || '—'}) · $${i.precio_base || 0}</option>`
+    ).join('');
+
+    const { value: form, isConfirmed } = await Swal.fire({
+        title: 'Agregar artículo',
+        html: `<p class="text-sm text-gray-500 mb-4">Se vinculará a la renta <b>${rentaPrincipal.id_renta}</b></p>
+               <div class="space-y-3 text-left">
+                 <div>
+                   <label class="text-xs font-bold text-gray-600 block mb-1">Artículo</label>
+                   <select id="swal-art-sel" class="swal2-select !w-full !mt-0">${optsHtml}</select>
+                 </div>
+                 <div>
+                   <label class="text-xs font-bold text-gray-600 block mb-1">Precio adicional</label>
+                   <input type="number" id="swal-art-precio" class="swal2-input !mt-0" placeholder="$0">
+                 </div>
+               </div>`,
+        showCancelButton: true,
+        cancelButtonText: 'Cancelar',
+        confirmButtonText: 'Agregar artículo',
+        confirmButtonColor: '#6366f1',
+        preConfirm: () => {
+            const artId  = document.getElementById('swal-art-sel').value;
+            const precio = parseFloat(document.getElementById('swal-art-precio').value) || 0;
+            if (!artId) { Swal.showValidationMessage('Selecciona un artículo'); return false; }
+            return { artId, precio };
+        }
+    });
+    if (!isConfirmed) return;
+
+    Swal.fire({ title: 'Guardando...', didOpen: () => Swal.showLoading() });
+
+    const artSel = disponibles.find(i => i.id_articulo === form.artId);
+    const nuevaRenta = {
+        id_renta: 'R-' + Date.now().toString(16).slice(-8).toUpperCase(),
+        id_cliente: rentaPrincipal.id_cliente,
+        id_articulo: form.artId,
+        estatus_renta: rentaPrincipal.estatus_renta,
+        total_renta: form.precio,
+        descuento: 0,
+        abono: form.precio,
+        saldo_pendiente: 0,
+        fecha_evento: rentaPrincipal.fecha_evento,
+        fecha_entrega: rentaPrincipal.fecha_entrega,
+        fecha_retorno: rentaPrincipal.fecha_retorno,
+        documento_garantia: rentaPrincipal.documento_garantia || '',
+        ajustes: `Artículo adicional · Renta principal: ${rentaPrincipal.id_renta}`
+    };
+
+    const { data: inserted, error } = await sb.from('rentas').insert(nuevaRenta).select().single();
+    if (error) { Swal.fire('Error', 'No se pudo registrar: ' + error.message, 'error'); return; }
+
+    if (form.artId) {
+        const nuevoEstado = rentaPrincipal.estatus_renta === 'Entregada' ? 'Rentado' : 'Apartado';
+        await sb.from('inventario').update({ estado_actual: nuevoEstado }).eq('id_articulo', form.artId);
+        const iI = datosGlobales.inventario.findIndex(i => i.id_articulo === form.artId);
+        if (iI !== -1) datosGlobales.inventario[iI].estado_actual = nuevoEstado;
+    }
+
+    if (inserted) datosGlobales.rentas.push(inserted);
+    cerrarModalRenta();
+    renderizarRentas(datosGlobales.rentas);
+    renderizarInventario(datosGlobales.inventario);
+    Swal.fire({ icon: 'success', title: '¡Artículo agregado!', text: `${artSel?.nombre || ''} vinculado a ${rentaPrincipal.id_renta}`, timer: 2000, showConfirmButton: false });
 }
