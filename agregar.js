@@ -14,6 +14,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     cambiarOpcionesTalla();
 });
 
+// ---- Comprimir imagen con Canvas ----
+function comprimirImagen(file, maxW = 1200, maxH = 1200, quality = 0.82) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                let w = img.width, h = img.height;
+                if (w > maxW || h > maxH) {
+                    const ratio = Math.min(maxW / w, maxH / h);
+                    w = Math.round(w * ratio);
+                    h = Math.round(h * ratio);
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width  = w;
+                canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                canvas.toBlob(
+                    (blob) => resolve(new File([blob], 'foto.jpg', { type: 'image/jpeg' })),
+                    'image/jpeg',
+                    quality
+                );
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function formatearKB(bytes) {
+    return bytes < 1024 * 1024
+        ? (bytes / 1024).toFixed(0) + ' KB'
+        : (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
 // ---- ID único ----
 function generarID() {
     const id = Date.now().toString(16).slice(-8);
@@ -61,21 +96,47 @@ function actualizarCodigo() {
 document.getElementById('tipo').addEventListener('change', cambiarOpcionesTalla);
 document.getElementById('talla').addEventListener('change', actualizarCodigo);
 
-// ---- Preview de foto ----
-document.getElementById('input-foto').addEventListener('change', function () {
+// ---- Preview + compresión de foto ----
+document.getElementById('input-foto').addEventListener('change', async function () {
     const file = this.files[0];
     if (!file) return;
-    fotoArchivo = file;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const img = document.getElementById('preview-img');
-        img.src = e.target.result;
-        img.classList.remove('hidden');
-        document.getElementById('preview-placeholder').classList.add('hidden');
-        document.getElementById('zona-foto').classList.add('tiene-foto');
-    };
-    reader.readAsDataURL(file);
+    const originalSize = file.size;
+
+    // Mostrar estado de compresión
+    const placeholder = document.getElementById('preview-placeholder');
+    placeholder.innerHTML = `
+        <div class="text-center select-none">
+            <div class="w-16 h-16 bg-pink-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <span class="material-icons-round text-3xl text-pink-400 animate-spin">sync</span>
+            </div>
+            <p class="text-gray-500 text-sm font-bold">Comprimiendo...</p>
+        </div>`;
+    placeholder.classList.remove('hidden');
+    document.getElementById('preview-img').classList.add('hidden');
+
+    fotoArchivo = await comprimirImagen(file);
+
+    const compressedSize = fotoArchivo.size;
+    const saving = Math.round((1 - compressedSize / originalSize) * 100);
+
+    // Mostrar preview con la imagen comprimida
+    const url = URL.createObjectURL(fotoArchivo);
+    const img = document.getElementById('preview-img');
+    img.src = url;
+    img.classList.remove('hidden');
+
+    // Mostrar info de compresión sobre el preview
+    placeholder.innerHTML = `
+        <div class="absolute bottom-2 left-2 right-2 flex items-center justify-between bg-black/60 backdrop-blur-sm rounded-xl px-3 py-1.5">
+            <span class="text-white text-[10px] font-bold flex items-center gap-1">
+                <span class="material-icons-round text-green-400" style="font-size:12px">check_circle</span>
+                ${formatearKB(compressedSize)}
+            </span>
+            ${saving > 5 ? `<span class="text-green-400 text-[10px] font-bold">−${saving}%</span>` : ''}
+        </div>`;
+    placeholder.classList.remove('hidden');
+    document.getElementById('zona-foto').classList.add('tiene-foto');
 });
 
 // ---- Enviar formulario ----
@@ -96,13 +157,12 @@ document.getElementById('form-agregar').addEventListener('submit', async (e) => 
         const datos    = Object.fromEntries(formData);
         const idArt    = datos.id;
 
-        // 1. Subir foto a Supabase Storage
-        const ext      = fotoArchivo.name.split('.').pop();
-        const rutaFoto = `inventario/${idArt}.${ext}`;
+        // 1. Subir foto comprimida (siempre .jpg)
+        const rutaFoto = `inventario/${idArt}.jpg`;
 
         const { error: storageError } = await sb.storage
             .from('fotos')
-            .upload(rutaFoto, fotoArchivo, { upsert: true });
+            .upload(rutaFoto, fotoArchivo, { upsert: true, contentType: 'image/jpeg' });
 
         if (storageError) throw storageError;
 
