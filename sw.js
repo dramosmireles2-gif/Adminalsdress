@@ -3,7 +3,7 @@
 // Cache básico para que funcione más rápido
 // =============================================
 
-const CACHE_NAME = 'als-admin-v3';
+const CACHE_NAME = 'als-admin-v4';
 
 // Archivos que se guardan en caché para carga rápida
 const ARCHIVOS_CACHE = [
@@ -44,8 +44,13 @@ self.addEventListener('activate', (e) => {
 
 // Al hacer fetch: intenta la red primero, si falla usa caché
 self.addEventListener('fetch', (e) => {
-  // No cachear peticiones a Google (API, Sheets)
-  if (e.request.url.includes('google') || e.request.url.includes('googleapis')) {
+  // Solo cachear GET (POST/PUT son llamadas a Supabase — no cacheables)
+  if (e.request.method !== 'GET') return;
+
+  // No cachear peticiones a APIs externas
+  if (e.request.url.includes('google') ||
+      e.request.url.includes('googleapis') ||
+      e.request.url.includes('supabase.co')) {
     return;
   }
 
