@@ -1591,6 +1591,43 @@ async function venderVestido() {
     Swal.fire({ icon: 'success', title: '¡Vestido vendido!', text: 'Ya no aparece en el inventario activo.' + (extras ? '\n' + extras : ''), timer: 2000, showConfirmButton: false });
 }
 
+// ---- ELIMINAR ARTÍCULO ----
+async function eliminarArticuloJS() {
+    if (!itemEditing) return;
+    const item = itemEditing;
+
+    const rentasActivas = datosGlobales.rentas.filter(r =>
+        r.id_articulo === item.id_articulo &&
+        (r.estatus_renta === 'Activa' || r.estatus_renta === 'Entregada')
+    );
+    if (rentasActivas.length) {
+        Swal.fire('No se puede eliminar', 'Este artículo tiene rentas activas. Ciérralas primero.', 'warning');
+        return;
+    }
+
+    const { isConfirmed } = await Swal.fire({
+        title: '¿Eliminar artículo?',
+        html: `Se eliminará <b>${item.nombre}</b> del inventario permanentemente.<br><br>Esta acción no se puede deshacer.`,
+        icon: 'warning',
+        showCancelButton: true,
+        cancelButtonText: 'Cancelar',
+        confirmButtonText: 'Sí, eliminar',
+        confirmButtonColor: '#ef4444',
+    });
+    if (!isConfirmed) return;
+
+    Swal.fire({ title: 'Eliminando...', didOpen: () => Swal.showLoading() });
+
+    const { error } = await sb.from('inventario').delete().eq('id_articulo', item.id_articulo);
+    if (error) { Swal.fire('Error', 'No se pudo eliminar: ' + error.message, 'error'); return; }
+
+    datosGlobales.inventario = datosGlobales.inventario.filter(i => i.id_articulo !== item.id_articulo);
+    cerrarModal();
+    renderizarInventario(datosGlobales.inventario);
+    calcularAlertas();
+    Swal.fire({ icon: 'success', title: '¡Artículo eliminado!', timer: 1200, showConfirmButton: false });
+}
+
 // ---- HISTORIAL DEL VESTIDO ----
 function cargarHistorialVestido() {
     if (!itemEditing) return;
