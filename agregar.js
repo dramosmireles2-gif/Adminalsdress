@@ -175,7 +175,6 @@ document.getElementById('form-agregar').addEventListener('submit', async (e) => 
             id_articulo:   idArt,
             tipo:          datos.tipo,
             precio_base:   parseFloat(datos.precio) || null,
-            precio_venta:  parseFloat(datos.precio_venta) || null,
             talla:         datos.talla,
             color:         datos.color || '',
             estado_actual: 'Disponible',
